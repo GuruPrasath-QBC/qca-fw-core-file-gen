@@ -1,0 +1,88 @@
+#!/bin/bash
+
+#Bin file
+DUMPBIN=./WLAN_FW_IPQ4019.BIN
+TMPTXT=./dump.txt
+CORETXT=./core.txt
+
+echo "" > $CORETXT
+
+
+
+#Do NOT change the order in while loop below as the dump file is structured in the same order.
+
+NUM_SECTIONS=8
+sect_indx=0
+
+while [ "$sect_indx" -lt "$NUM_SECTIONS" ]
+do
+case "$sect_indx" in
+    0)
+    SECTION=DRAM
+    START=0x400000
+    DRAM_LENGTH=0x68000
+    LENGTH=$DRAM_LENGTH
+    OFFSET=0
+    ;;
+    1)
+    SECTION=SRAM
+    START=0xC0000
+    SRAM_LENGTH=0x40000
+    LENGTH=$SRAM_LENGTH
+    OFFSET=$DRAM_LENGTH
+    ;;
+    2)
+    SECTION=IRAM
+    START=0x980000
+    IRAM_LENGTH=0x50000
+    LENGTH=$IRAM_LENGTH
+    OFFSET=$(($DRAM_LENGTH + $SRAM_LENGTH))
+    ;;
+    3)
+    SECTION=APB0_REGISTERS
+    START=0x30000 
+    APB0_LENGTH=0x7000
+    LENGTH=$APB0_LENGTH
+    OFFSET=$(($DRAM_LENGTH + $SRAM_LENGTH + $IRAM_LENGTH))
+    ;;
+    4)
+    SECTION=WIFI_REGISTERS
+    START=0x43000 
+    WIFI_LENGTH=0x3000
+    LENGTH=$WIFI_LENGTH
+    OFFSET=$(($DRAM_LENGTH + $SRAM_LENGTH + $IRAM_LENGTH + $APB0_LENGTH))
+    ;;
+    5)
+    SECTION=CE_REGISTERS
+    START=0x4A000 
+    CE_LENGTH=0x5000
+    LENGTH=$CE_LENGTH
+    OFFSET=$(($DRAM_LENGTH + $SRAM_LENGTH + $IRAM_LENGTH + $APB0_LENGTH + $WIFI_LENGTH))
+    ;;
+    6)
+    SECTION=SOC_REGISTERS
+    START=0x80000 
+    SOC_LENGTH=0x6000
+    LENGTH=$SOC_LENGTH
+    OFFSET=$(($DRAM_LENGTH + $SRAM_LENGTH + $IRAM_LENGTH + $APB0_LENGTH + $WIFI_LENGTH + $CE_LENGTH))
+    ;;
+    7)
+    SECTION=APB1_REGISTERS
+    START=0x3f000 
+    APB1_LENGTH=0x3000
+    LENGTH=$APB1_LENGTH
+    OFFSET=$(($DRAM_LENGTH + $SRAM_LENGTH + $IRAM_LENGTH + $APB0_LENGTH + $WIFI_LENGTH + $CE_LENGTH + $SOC_LENGTH))
+    ;;
+esac
+
+echo "Segment $SECTION Start Address $START Length(Dwords) $LENGTH Offset(Dwords) $(printf 0x%x $OFFSET)"
+./format_byte_dump $DUMPBIN $TMPTXT $START $LENGTH $OFFSET
+cat $TMPTXT >> $CORETXT
+
+sect_indx=$(($sect_indx+1))
+
+done
+
+./core_file_gen $CORETXT
+
+
