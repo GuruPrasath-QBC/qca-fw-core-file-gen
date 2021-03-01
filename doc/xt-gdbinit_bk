@@ -1,0 +1,4369 @@
+# These are some useful functions to add to your ~/.xt-gdbinit file
+# to support peregrine WLAN debugging
+
+# Standard gdb debug settings 
+
+set history filename ~/.gdb_history
+set history save on
+set print pretty on
+set print object on
+set print vtbl on
+set pagination off
+set output-radix 16
+
+define cmnos
+p (_A_athos_indirection_table_t)_indir_tbl
+end
+
+define fpga_ver
+x 0xa6048
+end
+ 
+define dmem_usage
+set $allocram_cnt=0
+while ($allocram_cnt < 280)
+x (allocram_track+$allocram_cnt).ret_addr
+p/d (allocram_track+$allocram_cnt).nbytes
+set $allocram_cnt += 1
+end
+end
+
+
+define dmem_usage1
+set $allocram_cnt=0
+while ($allocram_cnt < 100)
+x (allocram_track+$allocram_cnt).ret_addr
+p/x (allocram_track+$allocram_cnt).nbytes
+set $allocram_cnt += 1
+end
+end
+
+define dmem_usage2
+set $allocram_cnt=100
+while ($allocram_cnt < 200)
+x (allocram_track+$allocram_cnt).ret_addr
+p/x (allocram_track+$allocram_cnt).nbytes
+set $allocram_cnt += 1
+end
+end
+
+define dmem_usage3
+set $allocram_cnt=200
+while ($allocram_cnt < 300)
+x (allocram_track+$allocram_cnt).ret_addr
+p/x (allocram_track+$allocram_cnt).nbytes
+set $allocram_cnt += 1
+end
+end
+
+
+
+define dump_ppdu_desc
+print *g_tx_ctxt->hwq[$arg0]->seq_state->su_ppdu_cache.stqh_first.ppdu_desc
+end
+ 
+define dump_ppdu_tlv
+print *(struct hwsched_su_pdg_desc *)(g_tx_ctxt->hwq[$arg0]->seq_state->su_ppdu_cache.stqh_first.ppdu_desc.desc_info.hwsch_cmd.scheduler_tlv_ptr)
+end
+ 
+define dump_isr_status
+p *(struct wal_tx_isr_status *)(g_tx_ctxt->isr_ring_cfg.status_ring+$arg0)
+end
+
+define wal_vdev
+print/x *(wal_vdev_t *)g_pdev_p->vdev_array[$arg0]->vdev_handle
+end
+
+define wal_vdev_cb_t
+set $cb_cnt=0
+set $current_cb_ptr=(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->cb_data_list->stqh_first)
+print *$current_cb_ptr
+print $current_cb_ptr
+set $current_cb_ptr2 = $current_cb_ptr->link_cb_data->stqe_next
+print *$current_cb_ptr2
+print $current_cb_ptr2
+print *(POOL_CTXT *)(((wal_pdev_t *)g_pdev_p->pdev_handle)->vdev_event_cb_pool)
+end
+
+define wal_vdev_cb
+set $cb_cnt = 0
+set $current_cb_ptr = (((wal_vdev_t *)g_pdev_p->vdev_array[$arg0]->vdev_handle)->cb_data_list->stqh_first)
+echo "cb assign"
+p *$current_cb_ptr
+#while($cb_cnt < $arg1)
+#if($current_cb_ptr->link_cb_data)
+#set $current_cb_ptr = $current_cb_ptr->link_cb_data->stqe_next
+#else
+#echo "cb not present"
+#set $current_cb_ptr=0
+#set $cb_cnt=$arg1
+#end  #if valid cb data
+#set $cb_cnt=$cb_cnt+1
+#end  #while loop
+#if($current_cb_ptr)
+#print *$current_cb_ptr
+#end
+end  #end of define
+
+define wal_swba
+print *(WAL_SWBA_INFO *)((wal_pdev_t *)g_pdev_p->pdev_handle)->swba_ctxt
+end
+
+define wal_pdev
+print/x *(wal_pdev_t *)g_pdev_p->pdev_handle
+end
+
+define wal_tx_ctxt
+print/x *(struct wal_tx_ctxt *)(((wal_pdev_t *)g_pdev_p->pdev_handle)->tx_ctxt)
+end
+
+define wal_dm
+set $txctxt = (struct wal_tx_ctxt *)(((wal_pdev_t *)g_pdev_p->pdev_handle)->tx_ctxt)
+set $dm =  $txctxt->dm
+print/d $dm
+end
+
+
+
+define rc
+print *((RATE_CONTEXT *)g_pdev_p->vdev_array[0]->pRateCtrl)
+end
+
+define rt
+set pagination on
+print *((RATE_CONTEXT *)g_pdev_p->vdev_array[0]->pRateCtrl)->sc_currates
+set pagination off
+end
+
+define rtf
+print ((RATE_CONTEXT *)g_pdev_p->vdev_array[0]->pRateCtrl)->sc_currates->info[$arg0]
+end
+
+define rtfd
+print/d ((RATE_CONTEXT *)g_pdev_p->vdev_array[0]->pRateCtrl)->sc_currates->info[$arg0]
+end
+
+
+
+define psta_debug
+ast_dump 128
+mcmn_regs
+rxpcu_regs
+wal_peer 0 0
+wal_peer 0 1
+wal_peer 1 0
+wal_peer 1 1
+end
+
+
+define ast_dump
+set $ast_cnt=0
+while ($ast_cnt < $arg0)
+print $ast_cnt
+print *((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt)
+set $ast_cnt += 1
+end
+end
+
+define ast_table
+#set $ast_cnt=0
+#while ($ast_cnt < $arg0)
+print *((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $arg0)
+#set $ast_cnt += 1
+#end
+end
+
+
+
+define peer_ast
+#set $ast_cnt=0
+#while ($ast_cnt < $arg0)
+print ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $arg0)->peer_entry_ptr
+#set $ast_cnt += 1
+#end
+end
+
+define rcn
+set $peer_cnt=0
+if(g_pdev_p->vdev_array[$arg0]->peer_tbl[$arg1])
+print/x *(((struct rate_node *)g_pdev_p->vdev_array[$arg0]->peer_tbl[$arg1].rc_node))
+else
+echo "peer not present\n"
+end
+end
+
+
+define rcs_validrate
+set $peer_cnt=0
+if(g_pdev_p->vdev_array[$arg0]->peer_tbl[$arg1])
+print/x (((struct rate_node *)g_pdev_p->vdev_array[$arg0]->peer_tbl[$arg1].rc_node)->txRateCtrl)->validRateIndex[$arg2]
+else
+echo "peer not present\n"
+end
+end
+
+define rcs
+set $peer_cnt=0
+if(g_pdev_p->vdev_array[$arg0]->peer_tbl[$arg1])
+print/x *(((struct rate_node *)g_pdev_p->vdev_array[$arg0]->peer_tbl[$arg1].rc_node)->txRateCtrl)
+else
+echo "peer not present\n"
+end
+end
+
+define waltest_peer
+set $peer_cnt=0
+set $current_peer_ptr = (wal_peer_t *)(((wal_vdev_t *)g_waltest_ctxt->vdev)->peer_list->stqh_first)
+while ($peer_cnt < $arg1)
+if($current_peer_ptr->link_peer)
+set $current_peer_ptr = $current_peer_ptr->link_peer->stqe_next
+else
+echo "peer not present\n"
+set $current_peer_ptr=0
+set $peer_cnt=$arg1
+end
+set $peer_cnt=$peer_cnt+1
+end
+if($current_peer_ptr)
+print/x *$current_peer_ptr
+end
+end
+
+define wal_peer
+set $peer_cnt=0
+set $current_peer_ptr = (wal_peer_t *)(((wal_vdev_t *)g_pdev_p->vdev_array[$arg0]->vdev_handle)->peer_list->stqh_first)
+while ($peer_cnt < $arg1)
+if($current_peer_ptr->link_peer)
+set $current_peer_ptr = $current_peer_ptr->link_peer->stqe_next
+else
+echo "peer not present\n"
+set $current_peer_ptr=0
+set $peer_cnt=$arg1
+end
+set $peer_cnt=$peer_cnt+1
+end
+if($current_peer_ptr)
+print/x *$current_peer_ptr
+print/x $current_peer_ptr
+end
+set $peer_key_cnt=0
+set $current_peer_key_ptr = $current_peer_ptr->u.head_peer_key
+while ($peer_key_cnt < 4)
+if($current_peer_key_ptr)
+print/x $current_peer_key_ptr
+set $current_peer_key_ptr = $current_peer_key_ptr->u.next_peer_key
+set $peer_key_cnt += 1
+else
+set $peer_key_cnt = 4
+end
+
+end
+end
+
+
+define peer_entry
+set $peer_cnt=0
+set $current_peer_ptr = (wal_peer_t *)(((wal_vdev_t *)g_pdev_p->vdev_array[$arg0]->vdev_handle)->peer_list->stqh_first)
+while ($peer_cnt < $arg1)
+if($current_peer_ptr->link_peer)
+set $current_peer_ptr = $current_peer_ptr->link_peer->stqe_next
+else
+echo "peer not present\n"
+set $current_peer_ptr=0
+set $peer_cnt=$arg1
+end
+set $peer_cnt=$peer_cnt+1
+end
+if($current_peer_ptr)
+print/x $current_peer_ptr->u.default_peer_key->hw_peer
+end
+end
+
+
+
+#define wal_peer
+#if(g_pdev_p->vdev_array[$arg0])
+#set $peer_cnt=0
+#set current_peer_ptr = (wal_peer *)(((wal_vdev_t *)g_pdev_p->vdev_array[$arg0]->vdev_handle)->peer_list->stqh_first)
+#while ($peer_cnt < $arg1)
+#set current_peer_ptr = current_peer_ptr->link_peer->stqe_next
+#end
+#if($current_peer_ptr)
+#print *current_peer_ptr
+#else
+#echo "peer not preset\n"
+#end
+#else # vdev else
+#echo "vdev not preset\n"
+#end 
+#end # define end
+
+define wal_peer_0
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first)
+end
+
+define wal_hw_peer_0
+print *(struct peer_entry *)((((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first)->u.default_peer_key)
+end
+
+define wal_peer_1
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next)
+end
+
+define wal_hw_peer_1
+print *(struct peer_entry *)((((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next)->u.default_peer_key)
+end
+
+define wal_peer_2
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->link_peer->stqe_next)
+end
+
+define wal_hw_peer_2
+print *(struct peer_entry *)((((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->link_peer->stqe_next)->u.default_peer_key)
+end
+
+
+define waltest_tid
+set $tid_cnt=0
+set $current_tid_ptr = (wal_tid_t *)(((wal_vdev_t *)g_waltest_ctxt->vdev)->peer_list->stqh_first->link_peer->stqe_next->tid_list->stqh_first)
+while ($tid_cnt < $arg0)
+if($current_tid_ptr->link_node_tid)
+set $current_tid_ptr = $current_tid_ptr->link_node_tid->stqe_next
+else
+echo "tid not present\n"
+set $current_tid_ptr=0
+set $tid_cnt=$arg0
+end
+set $tid_cnt=$tid_cnt+1
+end
+if($current_tid_ptr)
+print/x *$current_tid_ptr
+end
+end
+
+
+
+
+
+define wal_tid
+set $tid_cnt=0
+set $current_tid_ptr = (wal_tid_t *)(((wal_vdev_t *)g_pdev_p->vdev_array[$arg0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->tid_list->stqh_first)
+while ($tid_cnt < $arg1)
+if($current_tid_ptr->link_node_tid)
+set $current_tid_ptr = $current_tid_ptr->link_node_tid->stqe_next
+else
+echo "tid not present\n"
+set $current_tid_ptr=0
+set $tid_cnt=$arg1
+end
+set $tid_cnt=$tid_cnt+1
+end
+if($current_tid_ptr)
+print/x *$current_tid_ptr
+end
+end
+
+define wal_tid_0
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->tid_list->stqh_first)
+end
+
+define wal_tid_1
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->tid_list->stqh_first->link_node_tid->stqe_next)
+end
+
+define wal_tid_2
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->tid_list->stqh_first->link_node_tid->stqe_next->link_node_tid->stqe_next)
+end
+
+define wal_tid_3
+print *(((wal_vdev_t *)g_pdev_p->vdev_array[0]->vdev_handle)->peer_list->stqh_first->link_peer->stqe_next->tid_list->stqh_first->link_node_tid->stqe_next->link_node_tid->stqe_next->link_node_tid->stqe_next)
+end
+
+define rx_ring_idx
+print *(0x30800+0x90)
+print *(0x30800+0x94)
+print *(0x30800+0x98)
+end
+
+
+define rx_status
+#rx status
+p/x *(struct wal_rx_full_status*)(*(*0x30800+4*$arg0))
+end
+
+#define rx_local
+#rx status
+#p/x *(struct ath_buf *)(*(*0x30100+4*$arg0))
+#end
+
+
+
+define rx_ppdu_start
+#rx status
+p/x ((struct wal_rx_full_status*)(*(*0x30800+4*$arg0)))->rx_status->rx_desc->ppdu_start
+end
+
+define rx_ppdu_end
+#rx status
+p/x ((struct wal_rx_full_status*)(*(*0x30800+4*$arg0)))->rx_status->rx_desc->ppdu_end
+end
+
+
+
+define rx_msdu_start
+#rx status
+p/x ((struct wal_rx_full_status*)(*(*0x30800+4*$arg0)))->rx_status->rx_desc->msdu_start
+end
+
+
+define reset_tsf
+set *((A_UINT32 *)0x4108c)=0x3000000
+end
+
+
+define rx_tsf
+#rx status
+p/x ((struct wal_rx_full_status*)(*(*0x30800+4*$arg0)))->rx_status->rx_desc->ppdu_end->tsf_timestamp
+end
+
+define rx_wb
+#rx status
+p/d ((struct wal_rx_full_status*)(*(*0x30800+4*$arg0)))->rx_status->rx_desc->ppdu_end->wb_timestamp
+end
+
+
+
+define rx_tsf_diff
+#rx status
+p/d ((struct wal_rx_full_status*)(*(*0x30800+4*$arg0)))->rx_status->rx_desc->ppdu_end->tsf_timestamp - ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0-1))))->rx_status->rx_desc->ppdu_end->tsf_timestamp
+end
+
+
+
+
+
+
+
+define rx_local
+print *(struct wal_rx_full_status*)(*(*0x30820+4*$arg0))
+end
+
+
+
+define rx_status_crc
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+0))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+1))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+2))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+3))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+4))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+5))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+6))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+7))))->rx_status.rx_desc.attention.fcs_err
+print ((struct wal_rx_full_status*)(*(*0x30800+4*($arg0+8))))->rx_status.rx_desc.attention.fcs_err
+end
+
+
+
+
+
+define vht_rx
+reset
+cfgrx
+set {int}0x4005c=0x2
+set g_waltest_ampdu_ok=0
+set g_dbg_no_sw_retry=1
+end
+
+define stomp
+set stop_exec=stop_exec^1
+n
+n
+set stop_exec=stop_exec^1
+c
+end
+
+define vht_tx
+reset
+cfgtx
+set {int}0x4005c=0x2
+set g_waltest_ampdu_ok=0
+set vht_data_rate=1
+set g_dbg_no_sw_retry=1
+end
+
+define hookpost-stepi
+x/1i $pc
+end
+
+define m0
+target remote 10.234.15.132:40000
+end
+
+define m1
+target remote 10.234.15.132:40001
+end
+
+define mc2
+target remote 10.234.15.154:20002
+end
+
+define mc0
+target remote 10.234.15.154:20000
+end
+
+define ml0
+target remote 10.234.26.167:20000
+end
+
+define ml2
+target remote 10.234.26.167:20002
+end
+
+define m2m1
+target remote 10.234.15.146:20000
+end 
+
+define m2m2
+target remote 10.234.15.146:20002
+end
+
+define m2
+target remote 10.234.15.110:30002
+end
+
+define m5
+target remote 10.234.15.110:20000
+end
+
+define m7
+target remote 10.234.15.110:20002
+end
+
+
+
+define mp0
+target remote 10.234.15.157:40000
+end
+
+define mp1
+target remote 10.234.15.157:40001
+end
+
+define cfgrx
+runtowaltest
+set g_waltest_id=2
+set g_dbg_no_sw_retry=1
+#print "********WAR FOR RXPCU_TXBF_CNTL_ADDRESS, SETTING TIMEOUT TO 0XFF*****************"
+#set {int}0x32050 |= 0xffff0000
+#print "********WAR  WAR WAR WAR WAR WAR WAR WAR WAR WAR *******************************" 
+end
+
+
+define cfgmtx
+runtowaltest
+set g_waltest_id=1
+set g_dbg_no_sw_retry=1
+set g_waltest_groupid=5
+set g_txbf_enable=1
+set g_waltest_tx_mu=1
+set g_waltest_rx_mu=0
+set g_waltest_peer_aid=10
+set g_txbf_force_sounding=1
+set g_dbg_subfrms_max=0x4
+set g_dbg_wal_max_msdus=1
+set g_dbg_sched_mu_eligible_frames=8
+set g_waltest_tx_num_tids = 1
+end
+
+define cfgmrx
+runtowaltest
+set g_waltest_id=2
+set g_dbg_no_sw_retry=1
+set g_waltest_groupid=5
+set g_waltest_userid=0
+set g_waltest_rx_mu=1
+set g_waltest_peer_aid=10
+end
+
+
+
+define cfgtx
+runtowaltest
+set g_waltest_id=1
+set g_dbg_no_sw_retry=1
+#print "********WAR FOR RXPCU_TXBF_CNTL_ADDRESS, SETTING TIMEOUT TO 0XFF*****************"
+#set {int}0x32050 |= 0xffff0000
+#print "********WAR  WAR WAR WAR WAR WAR WAR WAR WAR WAR *******************************" 
+end
+
+# Connect to the XOCD daemon for the WLAN CPU on your peregrine
+define wlan_rs_0
+target remote 10.234.17.206:20000
+end
+
+define wlan_ng_1
+target remote 10.234.26.113:20000
+end
+
+define wlan_ng_2
+target remote 10.234.26.113:20001
+end
+
+define wlan_asd
+target remote 10.234.26.156:20000
+end
+
+
+
+define wlan_rs_1
+target remote 10.234.19.232:20000
+end
+
+define wlan_dham_0
+target remote 10.234.12.91:20000
+end
+
+define wlan_dham_1
+target remote 10.234.19.110:20000
+end
+
+define umangp
+target remote 10.234.29.92:20000
+end
+
+define setup1
+target remote 10.234.26.141:20000
+end
+
+define setup2_1
+target remote 10.234.26.132:20000
+end
+
+define setup2_2
+target remote 10.234.26.133:20000
+end
+
+define setup3_1
+target remote 10.234.26.126:20000
+end
+
+define setup3_2
+target remote 10.234.26.122:20000
+end
+
+# Load a ROM firmware image for WLAN
+define loadwlan
+restore bin/fw.rom.bin binary 0x940000
+end
+
+define loadwaltest
+load image/waltest.out 
+end
+
+define loadathwlan
+restore bin/athwlan.bin binary 0x983c00
+end
+
+define symwaltest
+symbol-file image/waltest.out 
+end
+
+
+# Disable BMI on WLAN
+define nobmi
+set *((int *)0x40044) |= 1
+end
+
+define serial
+set *((int *)0x9024) |= 2
+end
+
+# Disable WatchDog Timer on WLAN
+define nowdt
+set *((int *)0x9024) |= 4
+end
+
+# Disable system sleep on WLAN
+define nosleep
+set *((int *)0x9024) |= 8
+end
+
+# Print the Host Interest structure
+define host_interest
+    p *((struct host_interest_s *)0x400800)
+end
+
+# Print the Host Interest structure
+define regdump
+    p *((struct register_dump_s *)(((struct host_interest_s *)0x400800)->hi_failure_state))
+end
+
+
+# set the Host interest structure to some values. 
+define host_interest_set
+    set ((struct host_interest_s *)0x400800)->hi_app_host_interest=0x2
+    set (((struct host_interest_s *)0x400800)->hi_option_flag)=0x220a
+    set (((struct host_interest_s *)0x400800)->hi_serial_enable)=0x1
+    set (((struct host_interest_s *)0x400800)->hi_app_start)=0x99000
+    set (((struct host_interest_s *)0x400800)->hi_clock_info)=0x4082b0
+    set (((struct host_interest_s *)0x400800)->hi_board_data_initialized)=0x1
+    set (((struct host_interest_s *)0x400800)->hi_end_RAM_reserve_sz)=0x1eb8
+    set (((struct host_interest_s *)0x400800)->hi_allocram_start)=0x411290
+    set (((struct host_interest_s *)0x400800)->hi_option_flag2)=0x10
+    set (((struct host_interest_s *)0x400800)->hi_interconnect_state)=0x401c5c
+end
+
+
+
+
+define rtcregs
+    set $rtc_regs=(struct rtc_wlan_reg_reg_s *)0x00004000
+    printf "RTC REGISTERS\n"
+    p *$rtc_regs
+end
+
+define analogregs
+    set $analog_regs=(struct analog_intf_athr_wlan_reg_reg_s *)0x0001c000
+    printf "ANALOG REGISTERS\n"
+    p *$analog_regs
+end
+
+define uartregs
+    set $uart_regs=(struct uart_reg_reg_s *)0x0000c000
+    printf "UART REGISTERS\n"
+    p *$uart_regs
+end
+
+define hostregs
+    set $host_regs=(struct mbox_wlan_host_reg_reg_s *)0x0001a000
+    printf "HOST REGISTERS\n"
+    p *$host_regs
+end
+
+# load rom symbol table
+define rams
+    symbol-file image/athwlan.out
+end
+
+# load rom symbol table
+define roms
+    add-symbol-file image/sw.rom.out 0x940000
+end
+
+define otp
+    symbol-file image/otp.out
+end
+
+define socregs
+  rtcregs
+  analogregs
+  uartregs
+  hostregs
+end
+
+# Run to appstart and load app
+define loadfw 
+#nowdt
+#nosleep
+loadwlan
+reset
+roms
+rams
+#cont
+end
+
+# Run to appstart and load app
+define runtoapp
+#reset
+#reset
+#nobmi
+#nowdt
+#nosleep
+loadwlan
+roms
+br athos_run_app
+cont
+load
+br waltest_main
+cont
+end
+
+define runtoathosapp
+nobmi
+nowdt
+nosleep
+br athos_run_app
+end
+
+define rtc_soc_regs
+print *((struct wifi_rtc_reg *)0x45000)
+end
+
+
+define lte_coex_regs
+print *((struct wifi_lte_coex_reg *)0x43800)
+end
+
+define pdg_regs
+print *((struct mac_pdg_reg *)0x30000)
+end
+
+define txdma_regs
+print *((struct mac_txdma_reg *)0x30400)
+end
+
+define rxdma_regs
+print *((struct mac_rxdma_reg *)0x30800)
+end
+
+define ole_regs
+print *((struct mac_ole_reg  *)0x30c00)
+end
+
+define mcmn_regs
+print *((struct mac_mcmn_reg *)0x31000)
+end
+
+define mtrc_regs
+print *((struct mac_trc_reg *)0x31c00)
+end
+
+define rxpcu_regs
+print *((struct mac_rxpcu_reg *)0x32000)
+end
+
+define txpcu_regs
+print *((struct mac_txpcu_reg *)0x36000)
+end
+
+define ampi_regs
+print *((struct mac_ampi_reg *)0x3a000)
+end
+
+define crypto_regs
+print *((struct mac_crypto_reg *)0x3f000)
+end
+
+define hwsch_regs
+print *((struct mac_hwsch_reg *)0x3f400)
+end
+
+define mxi_regs
+print *((struct mac_mxi_reg *)0x3fc00)
+end
+
+define wificmn_regs
+print *((struct mac_wificmn_reg *)0x40000)
+end
+
+define wifitmrs_regs
+print *((struct wifi_timers_reg *)0x41000)
+end
+
+define wifiregs
+  hwsch_regs 
+  wifitmrs_regs
+  wificmn_regs
+  pdg_regs
+  txdma_regs
+  rxdma_regs
+  mcmn_regs
+  txpcu_regs
+  rxpcu_regs
+  mxi_regs
+  ole_regs
+  crypto_regs
+end
+
+
+#define txdma_regs
+#print ((union wifi_mac_reg *)0x30400)->txdma
+#end
+#
+#define rxdma_regs
+#print ((union wifi_mac_reg *)0x30800)->rxdma
+#end
+#
+#define ole_regs
+#print ((union wifi_mac_reg *)0x30C00)->ole.part1
+#print ((union wifi_mac_reg *)0x30C00)->ole.part2
+#print ((union wifi_mac_reg *)0x30C00)->ole.part3
+#end
+#
+#define mcmn_regs
+#print ((union wifi_mac_reg *)0x31000)->mcmn.part1
+#print ((union wifi_mac_reg *)0x31000)->mcmn.part2
+#print ((union wifi_mac_reg *)0x31000)->mcmn.part3
+#print ((union wifi_mac_reg *)0x31000)->mcmn.part4
+#print ((union wifi_mac_reg *)0x31000)->mcmn.part5
+#end
+#
+#define rxole_regs
+#print ((union wifi_mac_reg *)0x30c00)->ole.part1
+#print ((union wifi_mac_reg *)0x30c00)->ole.part2
+#print ((union wifi_mac_reg *)0x30c00)->ole.part3
+#print ((union wifi_mac_reg *)0x30c00)->ole.part4
+#end
+#
+#
+#define rxpcu_regs
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part1
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part2
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part3
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part4
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part5
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part6
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part7
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part8
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part9
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part10
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part11
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part12
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part13
+#print ((union wifi_mac_reg *)0x32000)->rxpcu.part14
+#end
+#
+#define txpcu_regs
+#print ((union wifi_mac_reg *)0x36000)->txpcu.part1
+#print ((union wifi_mac_reg *)0x36000)->txpcu.part2
+#print ((union wifi_mac_reg *)0x36000)->txpcu.part3
+#print ((union wifi_mac_reg *)0x36000)->txpcu.part4
+#print ((union wifi_mac_reg *)0x36000)->txpcu.part5
+#print ((union wifi_mac_reg *)0x36000)->txpcu.part6
+#end
+#
+#define crypto_regs
+#print ((union wifi_mac_reg *)0x3f000)->crypto.part1
+#print ((union wifi_mac_reg *)0x3f000)->crypto.part2
+#end
+#
+#define hwsch_regs
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part1
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part2
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part3
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part4
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part5
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part6
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part7
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part8
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part9
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part10
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part11
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part12
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part13
+#end
+#
+#
+#
+#define hwsch13_regs
+#print ((union wifi_mac_reg *)0x3f400)->hwsch.part13
+#end
+#
+#define mxi_regs
+#print ((union wifi_mac_reg *)0x3fC00)->mxi
+#end
+#
+#define wificmn_regs
+#print ((union wifi_misc_reg *)0x40000)->wificmn
+#end
+#
+#define wifitmrs_regs
+#print ((union wifi_misc_reg *)0x41000)->wifitimers.part1
+#print ((union wifi_misc_reg *)0x41000)->wifitimers.part2
+#end
+
+define zero
+set *((unsigned int *)0x43c9e8)=0x0
+end
+
+
+define uc_pkt
+set *((unsigned int *)0x43c9e0)=0x400000
+set *((unsigned int *)0x43c7d0)=0x40
+set ((union wifi_misc_reg *)0x40000)->wificmn.WIFICMN_IMR_P = 0x7FFFFFF
+##set *((unsigned int *)0x42d8be)=0x80
+#set *((unsigned int *)0x42d8c2)=0xFFFFFFFF
+#set *((unsigned int *)0x42d8c6)=0xa0a0FFFF
+end
+
+define sw_tweaks
+#set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_BASE_ADDR[0] = 0x13C9CC
+#set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_MIN_IDX[0] = 0x0
+#set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_MAX_IDX[0] = 0x1
+#set *((unsigned int *)0x4354c0)=0x10001
+#set *((unsigned int *)0x438808)=0x0
+#set *((unsigned int *)0x438810)=0x78
+#set *((unsigned int *)0x43ca28)=0x0
+
+#MDK TLVs
+#set *((unsigned int *)$arg0)=0xac7a0080
+#set *((unsigned int *)($arg0+4))=0xac850014
+#set *((unsigned int *)($arg0+8))=0xc800000
+#set *((unsigned int *)($arg0+12))=0x3223bfff
+#set *((unsigned int *)($arg0+16))=0xfffe0c18
+#set *((unsigned int *)($arg0+20))=0xfffcfffd
+#set *((unsigned int *)($arg0+24))=0xffff
+#set *((unsigned int *)($arg0+28))=0xac7d0004
+#set *((unsigned int *)($arg0+32))=0x1bcb3
+#set *((unsigned int *)($arg0+36))=0xaca40004
+#set *((unsigned int *)($arg0+40))=0x10401
+#set *((unsigned int *)($arg0+44))=0xac6f0004
+#set *((unsigned int *)($arg0+48))=0x135600
+#set *((unsigned int *)($arg0+48))=0x1b001184
+#set *((unsigned int *)($arg0+52))=0xac590048
+#set *((unsigned int *)($arg0+56))=0x0
+#set *((unsigned int *)($arg0+60))=0xaca70008
+#set *((unsigned int *)($arg0+64))=0x200000
+#set *((unsigned int *)($arg0+68))=0xa9
+#DUMMY
+#set *((unsigned int *)($arg0+68))=0xac4b0024
+#set *((unsigned int *)($arg0+72))=0x0
+#set *((unsigned int *)($arg0+76))=0x0
+#set *((unsigned int *)($arg0+80))=0x0
+#set *((unsigned int *)($arg0+84))=0x0
+#set *((unsigned int *)($arg0+88))=0x0
+#set *((unsigned int *)($arg0+92))=0x0
+#set *((unsigned int *)($arg0+96))=0x0
+#set *((unsigned int *)($arg0+100))=0x0
+#set *((unsigned int *)($arg0+104))=0x0
+
+#set *((unsigned int *)($arg0+108))=0xac6c0024
+#set *((unsigned int *)($arg0+112))=0x10211
+#set *((unsigned int *)($arg0+116))=0x80b
+#set *((unsigned int *)($arg0+120))=0x0
+##set *((unsigned int *)($arg0+88))=0x0
+#set *((unsigned int *)($arg0+124))=0x18203
+#set *((unsigned int *)($arg0+126))=0xd6a
+#set *((unsigned int *)($arg0+130))=0x34d8c
+#set *((unsigned int *)($arg0+134))=0x3c926e
+#set *((unsigned int *)($arg0+138))=0x77539f
+#set *((unsigned int *)($arg0+142))=0xac67000c
+#set *((unsigned int *)($arg0+146))=0xc46
+#set *((unsigned int *)($arg0+150))=0x66
+#set *((unsigned int *)($arg0+154))=0x780000
+##dummy
+#set *((unsigned int *)($arg0+158))=0xac4b0004
+#set *((unsigned int *)($arg0+162))=0x0
+#set *((unsigned int *)($arg0+168))=0xac840000
+#MDK stuff ends
+#DUMMY
+
+set *((unsigned int *)($arg0+72))=0xac6c0024
+set *((unsigned int *)($arg0+76))=0x10211
+set *((unsigned int *)($arg0+80))=0x80b
+set *((unsigned int *)($arg0+84))=0x0
+set *((unsigned int *)($arg0+88))=0x0
+set *((unsigned int *)($arg0+92))=0x0
+set *((unsigned int *)($arg0+96))=0x0
+set *((unsigned int *)($arg0+100))=0x0
+set *((unsigned int *)($arg0+104))=0x0
+set *((unsigned int *)($arg0+108))=0x0
+#set *((unsigned int *)($arg0+92))=0x18203
+#set *((unsigned int *)($arg0+96))=0xd6a
+#set *((unsigned int *)($arg0+100))=0x34d8c
+#set *((unsigned int *)($arg0+104))=0x3c926e
+#set *((unsigned int *)($arg0+108))=0x77539f
+
+set *((unsigned int *)($arg0+112))=0xac67000c
+set *((unsigned int *)($arg0+116))=0xc46
+set *((unsigned int *)($arg0+120))=0x66
+set *((unsigned int *)($arg0+124))=0x780000
+##dummy
+#set *((unsigned int *)($arg0+128))=0xac4b0004
+#set *((unsigned int *)($arg0+132))=0x0
+#set *((unsigned int *)($arg0+136))=0xac840000
+#MDK stuff ends
+end
+
+define mdk_settings
+set ((union wifi_mac_reg *)0x31000)->mcmn.part1.MPDU_LINK_DESC_BASE_ADDR[0] = 0x1388fc
+set ((union wifi_mac_reg *)0x31000)->mcmn.part1.MPDU_LINK_DESC_MIN_IDX[0] = 0x0
+set ((union wifi_mac_reg *)0x31000)->mcmn.part1.MPDU_LINK_DESC_MAX_IDX[0] = 0x1
+set ((union wifi_mac_reg *)0x31000)->mcmn.part1.MPDU_LINK_DESC_MIN_IDX[1] = 0x0
+set ((union wifi_mac_reg *)0x31000)->mcmn.part1.MPDU_LINK_DESC_MAX_IDX[1] = 0x0
+set ((union wifi_mac_reg *)0x31000)->mcmn.part2.MSDU_LINK_DESC_BASE_ADDR = 0x1389fc
+set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_BASE_ADDR[0] = 0x138AC0
+set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_MIN_IDX[0] = 0x0
+set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_MAX_IDX[0] = 0x1
+set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_MIN_IDX[1] = 0x0
+set ((union wifi_mac_reg *)0x31000)->mcmn.part3.MSDU_LINK_EXT_DESC_MAX_IDX[1] = 0x0
+set *((unsigned int *)0x30414) = 0x0
+set *((unsigned int *)0x438a00) = 0x0
+set *((unsigned int *)0x438900) = 0x78            
+set *((unsigned int *)0x438904) = 0x78
+set *((unsigned int *)0x438b00) = 0x43ca4c
+set *((unsigned int *)0x438b04) = 0x0
+set *((unsigned int *)0x438b08) = 0x0
+set *((unsigned int *)0x438b0c) = 0x0
+set *((unsigned int *)0x438b10) = 0x12d900          
+#0x12d890
+set *((unsigned int *)0x438b14) = 0x780000         
+set ((struct scheduler_cmd *)0x434f00)->scheduler_tlv_ptr=(0x100000|(0xFFFFF&$arg0))
+set ((struct scheduler_cmd *)0x434f00)->sch_max_txop_time = 0xFFFF
+set *(unsigned int *)0x410f8=0x78
+#set ((struct scheduler_cmd *)0x434f00)->peer_entry_ptr0=$arg0
+
+#HWSCH short TLV experiment
+#set *((unsigned int *)$arg0)=0xac7a001C
+#set *((unsigned int *)($arg0+4))=0xac850014
+#set *((unsigned int *)($arg0+8))=0xc800000
+#set *((unsigned int *)($arg0+12))=0x3223bfff
+#set *((unsigned int *)($arg0+16))=0xfffe0c18
+#set *((unsigned int *)($arg0+20))=0xfffcfffd
+#set *((unsigned int *)($arg0+24))=0xffff
+#set *((unsigned int *)($arg0+28))=0xac840000
+#HWSCH short TLV experiment ends
+
+#MDK Stuff
+set *((unsigned int *)$arg0)=0xac7a0080
+set *((unsigned int *)($arg0+4))=0xac850014
+set *((unsigned int *)($arg0+8))=0xc800000
+set *((unsigned int *)($arg0+12))=0x3223bfff
+set *((unsigned int *)($arg0+16))=0xfffe0c18
+set *((unsigned int *)($arg0+20))=0xfffcfffd
+set *((unsigned int *)($arg0+24))=0xffff
+set *((unsigned int *)($arg0+28))=0xac7d0004
+set *((unsigned int *)($arg0+32))=0x1bcb3
+set *((unsigned int *)($arg0+36))=0xaca40004
+set *((unsigned int *)($arg0+40))=0x10001
+set *((unsigned int *)($arg0+44))=0xac6f0004
+set *((unsigned int *)($arg0+48))=0x135600
+#set *((unsigned int *)($arg0+48))=0x1b001184
+set *((unsigned int *)($arg0+52))=0xac590048
+set *((unsigned int *)($arg0+56))=0x0
+set *((unsigned int *)($arg0+60))=0xaca70008
+set *((unsigned int *)($arg0+64))=0x200000
+set *((unsigned int *)($arg0+68))=0xa9
+set *((unsigned int *)($arg0+72))=0xac6c0024
+set *((unsigned int *)($arg0+76))=0x10211
+set *((unsigned int *)($arg0+80))=0x80b
+set *((unsigned int *)($arg0+84))=0x0
+set *((unsigned int *)($arg0+88))=0x0
+set *((unsigned int *)($arg0+92))=0x18203
+set *((unsigned int *)($arg0+96))=0xd6a
+set *((unsigned int *)($arg0+100))=0x34d8c
+set *((unsigned int *)($arg0+104))=0x3c926e
+set *((unsigned int *)($arg0+108))=0x77539f
+set *((unsigned int *)($arg0+112))=0xac67000c
+set *((unsigned int *)($arg0+116))=0xc46
+set *((unsigned int *)($arg0+120))=0x66
+set *((unsigned int *)($arg0+124))=0x780000
+set *((unsigned int *)($arg0+128))=0xac840000
+#MDK stuff ends
+end
+
+define runtowaltest
+nobmi
+loadwlan
+roms
+br athos_run_app
+cont
+set ((struct host_interest_s *)0x400800)->hi_board_data_initialized=0x1
+loadwaltest
+symwaltest
+set host_specified_app_start=0x983c00
+set ((struct host_interest_s *)0x400800)->hi_allocram_start=0x0
+br waltest_main
+cont
+end
+
+define tx_seq
+br _tx_send_seq_start_sequence
+br _tx_send_seq_construct_sequence
+br _tx_send_post_data_ppdu
+br _tx_send_post_selfgen_ppdu
+br _tx_send_seq_chk_repost_stop
+br _whal_hwsch_trig_cmd_ring
+br _whal_hwsch_post_cmd
+br _tx_send_seq_trig_isr_done
+br _tx_send_seq_trig_dsr_done
+br _tx_send_queue_to_hw
+br ar6000SetupPpduCommon
+br ar6000SetupNdp
+br _tx_de_input
+br waltest_setup_frameq_pkts
+br waltest_tx_comp_indicate
+br tx_sch_run_sched
+br tx_dispatch_tid
+br tx_sched_algo
+br _tx_send_seq_post_sched_cmd
+br tx_sched_get_filter_value
+br _tx_q_enque_fn
+#br _tx_sched_self_trig_timeout
+#br _tx_sched_dispatch_conn_immed
+#br _tx_sched_trigger_conn
+#br _tx_sched_self_trig_timeout
+#br tx_sch_evt_proc_register
+#br tx_sch_evt_proc_unregister
+#br tx_sch_evt_proc_unregister
+#br tx_sch_evt_proc_tickle
+#br tx_sch_evt_proc_txdone
+#br tx_sch_evt_proc_insert
+#br tx_sch_evt_proc_prioritise
+#br tx_sch_evt_proc_deprioritise
+end
+
+define dump_scheduler_cmd
+# arg0 is the start address in CMD ring for the scheduler cmd
+print *(struct scheduler_cmd *)$arg0
+end
+
+#define dump_scheduler_fes_status
+# arg0 is the base address in the status ring for the scheduler status
+#print ((struct hwsched_status_desc *)($arg0+(88 * $arg1))).desc.fes_status
+#end
+
+#define dump_scheduler_sch_status
+# arg0 is the base address in the status ring for the scheduler status
+#print ((struct hwsched_status_desc *)($arg0+(88 * $arg1))).desc.sch_status
+#end
+
+define dump_scheduler_status_tag
+# arg0 is the start address in the status ring for the scheduler status
+print ((struct hwsched_status_desc *)$arg0).tlv_tag
+end
+
+define dump_scheduler_tlv_tag
+# arg0 is the start address in CMD ring for the scheduler cmd
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).tag
+end
+
+define dump_su_no_pdg_fes_setup_tlv
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).fes_setup_tlv
+end
+
+define dump_su_no_pdg_tx_cv_ref
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).tx_cv_ref
+end
+
+define dump_su_no_pdg_tx_setup_tlv
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).tx_setup_tlv
+end
+
+define dump_su_no_pdg_qhead_tlv
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).qhead_tlv
+end
+
+define dump_su_no_pdg_q_ext_ref_tlv
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).q_ext_ref_tlv
+end
+
+define dump_mpdu_queue_ext_common
+# arg0 is the pointer to the mpdu_queue_ext_common structure
+print *(struct mpdu_queue_ext_common *)$arg0
+end
+
+define dump_su_no_pdg_pdg_bypass_tlv
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).pdg_bypass_tlv
+end
+
+define dump_su_ppdu
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print *((struct hwsched_su_pdg_desc *)ppdu_desc.desc_info.hwsch_cmd.scheduler_tlv_ptr)
+end
+
+
+
+define dump_su_sw_pdg_fes
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)ppdu_desc).fes_setup_tlv
+end
+
+
+define dump_su_pdg_fes
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_pdg_desc *)ppdu_desc).fes_setup_tlv
+end
+
+define hwsch_idx
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_0
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_0
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_1
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_1
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_2
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_2
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_3
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_3
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_4
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_4
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_5
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_5
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_6
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_6
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_7
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_7
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_HEAD_8
+print ((union wifi_mac_reg *)0x3f400)->hwsch.part13.HWSCH_CMD_RING_TAIL_8
+end
+
+define dump_su_pdg
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print *((struct hwsched_su_pdg_desc *)ppdu_desc->desc_info->hwsch_cmd->scheduler_tlv_ptr)
+end
+
+define dump_sw_pdg
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print *((struct hwsched_su_sw_pdg_desc *)ppdu_desc->desc_info->hwsch_cmd->scheduler_tlv_ptr)
+end
+
+
+define dump_sch_cmd
+print *((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)
+end
+
+define dump_sch_tlv
+print *((struct hwsched_su_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr))
+end
+
+define dump_sw_tlv
+print *((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr))
+end
+
+define dump_sw_tlv0
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.ppdu_setup_tlv
+end
+
+
+define dump_sw_tlv10
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.ppdu_info.ppdu_11a_info_tlv
+end
+
+define dump_sw_tlv11
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.ppdu_info.ppdu_11n_info_tlv
+end
+
+define dump_sw_tlv12
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.ppdu_info.ppdu_11ac_su_info_tlv
+end
+
+define dump_sw_tlv13
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.ppdu_info.ppdu_11b_info_tlv
+end
+
+
+define dump_sw_tlv20
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.mproto_info.mproto_11a_info_tlv
+end
+
+define dump_sw_tlv21
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.mproto_info.mproto_11n_info_tlv
+end
+
+define dump_sw_tlv22
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.mproto_info.mproto_11ac_info_tlv
+end
+
+define dump_sw_tlv23
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.mproto_info.mproto_11b_info_tlv
+end
+
+define dump_sw_tlv3
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.tx_phy_desc_tlv
+end
+
+define dump_sw_tlv4
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.mproto_desc_tlv
+end
+
+define dump_sw_tlv5
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).pdg_bypass_tlv.bypass
+end
+
+define dump_sw_tlv6
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).fes_setup_tlv
+end
+
+define dump_sw_tlv7
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).tag
+end
+
+define dump_sw_tlv8
+print ((struct hwsched_su_sw_pdg_desc *)(((struct scheduler_cmd *)g_schd_cfg[$arg0].base+$arg1)->scheduler_tlv_ptr)).qhead_tlv
+end
+
+
+define dump_scheduler_fes_status
+print ((struct hwsched_status_desc *)g_status_cfg.base+$arg0)->tlv_tag
+print  ((struct hwsched_status_desc *)g_status_cfg.base+$arg0)->desc.fes_status
+end
+
+define dump_scheduler_sch_status
+print ((struct hwsched_status_desc *)g_status_cfg.base+$arg0)->tlv_tag
+print  ((struct hwsched_status_desc *)g_status_cfg.base+$arg0)->desc.sch_status
+end
+
+define dump_status_tlv_tag
+# tag of the TLV
+print ((struct hwsched_status_desc *)g_status_cfg.base+$arg0)->tlv_tag
+end
+
+
+define sw
+add-symbol-file sw.rom.out 0x940000
+end
+
+define my_con
+target remote localhost:20000
+end
+
+# Fetch resp RTT (FW->Host->FW)
+define fetch_resp_rtt
+ printf "\n-- g_fetch_rtt_histogram_500us --\n" 
+ p/d g_fetch_rtt_histogram_500us
+ printf "\n-- g_fetch_rtt_histogram_4ms --\n"
+ p/d g_fetch_rtt_histogram_4ms
+end
+
+# Dump EEPROM
+define eeprom_dump
+  # same as =>  p/x *(QC90XX_EEPROM *) 0xc0000
+  p/x *eepromStruct.pEeprom
+end
+
+define wrx
+set $my_index=0
+while ($my_index < 63)
+   	#rx_status $my_index
+	set $addr=*0x30800+4*$my_index
+	set $addr= ($addr&0xFFFFF)|0x400000
+	set $ring_mask=((struct wal_rx_full_status*)$addr).rx_status.rx_desc.msdu_start.ring_mask
+	printf "---------------------\n"
+	printf "slot : %d\n", $my_index
+	if $ring_mask & 0x2
+		printf "Routed to local ring\n"
+	end
+	if $ring_mask & 0x4
+		printf "Routed to remote ring\n"
+	end
+	printf "--------------------\n"
+	p/x *(struct wal_rx_full_status*)($addr)
+	set $my_index += 1
+end
+end
+
+#ISR status
+define isr_status
+set $my_index=0
+#p *(wal_isr_ring_t *)(g_tx_ctxt->isr_ring_cfg)
+while ($my_index < 32)
+	printf "--------------\n"
+	printf "slot : %d\n", $my_index
+	printf "--------------\n"
+	p *(struct wal_tx_isr_status *)(g_tx_ctxt->isr_ring_cfg.status_ring+$my_index)
+	set $my_index += 1
+end
+end
+
+# Dump CE Configuration
+define ce_config
+p/x CE_pipe_config
+p/x service_to_CE_pipe_space
+
+set $index=0 
+
+printf "Decoding into readable format...\n"
+
+printf "--------------------------------------------------------------\n"
+printf "CE Number  |  Total Entries |  Byte Max  | Flag | Direction\n"
+printf "--------------------------------------------------------------\n"
+while ($index < 12)
+    printf "%10d |", CE_pipe_config[$index].pipenum
+    printf "%15d |", CE_pipe_config[$index].nentries
+    printf "%11d |", CE_pipe_config[$index].nbytes_max
+    printf "   0x%x| ", CE_pipe_config[$index].flags
+    					
+    if CE_pipe_config[$index].pipedir == 1
+  	  printf "Target->Host\n"
+    else
+    if CE_pipe_config[$index].pipedir == 2
+	  printf "Host->Target\n"
+    else
+    if CE_pipe_config[$index].pipedir == 3
+	  printf "BiDirectional\n"
+    else
+	  printf "INVALID\n"
+    end
+    end	
+    end	
+    set $index+=1
+end
+printf "--------------------------------------------------------------\n"
+
+set $index=0 
+printf "-------------------------------------------------\n"
+printf "CE Number |      Service ID        |  CE Direction\n"
+printf "-------------------------------------------------\n"
+while ($index < 32)
+	printf "%8d  |",service_to_CE_pipe_space[$index].pipenum
+	printf "%11X ", service_to_CE_pipe_space[$index].service_id
+        
+        set $group = (service_to_CE_pipe_space[$index].service_id >> 8) & 0xFF
+        set $grp_index = service_to_CE_pipe_space[$index].service_id & 0xF
+
+        if $group == 0
+          printf "(RSVD,%d)  ", $grp_index
+        end
+
+        if $group == 1
+          printf "(WMI,"
+
+          if $grp_index == 0
+		printf "CTRL)"
+          end
+          if $grp_index == 1
+		printf "BE)  "
+          end
+	  if $grp_index == 2
+		printf "BK)  "
+          end
+	  if $grp_index == 3
+		printf "VI)  "
+          end
+	  if $grp_index == 4
+		printf "VO)  "
+	  end
+        end
+
+        if $group == 2
+           printf "(NMI,"
+           if $grp_index == 0
+		printf "CTRL) "
+           end
+           if $grp_index == 1
+		printf "DATA) "
+	   end
+        end
+
+        if $group == 3
+          printf "(HTT,DATA)"
+        end
+
+        if $group == 254
+          printf "(HTC,TEST)"
+        end
+
+        printf "   | "
+
+	if service_to_CE_pipe_space[$index].pipedir == 1
+  	  printf "Target->Host\n"
+	else
+	if service_to_CE_pipe_space[$index].pipedir == 2
+	  printf "Host->Target\n"
+	else
+    	if CE_pipe_config[$index].pipedir == 3
+	  printf "BiDirectional\n"
+	else
+	  printf "INVALID\n"
+	end
+	end
+	end
+  set $index+=1
+end
+printf "---------------------------------------------\n"
+end
+
+
+define offload_mgr
+ set $total_entries=sizeof(((OFFLOADMGR_CONTEXT *)g_pdev_p->offldmgr_handle).offload)/sizeof(((OFFLOADMGR_CONTEXT *)g_pdev_p->offldmgr_handle).offload[0])
+ set $index=0
+
+ while ($index < $total_entries)
+
+  printf "------------------- Slot %d ----------------\n", $index
+
+  set $non_data_hdlr = ((OFFLOADMGR_CONTEXT *)g_pdev_p->offldmgr_handle).offload[$index].non_data_handler
+  set $data_hdlr = ((OFFLOADMGR_CONTEXT *)g_pdev_p->offldmgr_handle).offload[$index].data_handler
+  set $frame_type = ((OFFLOADMGR_CONTEXT *)g_pdev_p->offldmgr_handle).offload[$index].frm_type_flag  
+
+  p/x ((OFFLOADMGR_CONTEXT *)g_pdev_p->offldmgr_handle).offload[$index]
+  if $non_data_hdlr != 0
+    printf "non data handler : "
+    p/a $non_data_hdlr
+  end
+
+  if $data_hdlr != 0
+    printf "data handler : "
+    p/a $data_hdlr
+  end
+
+  if $frame_type != 0
+
+     printf "Frame-Type : "
+
+     if $frame_type & 0x1
+           printf "MGMT "
+     end
+
+     if $frame_type & 0x2
+           printf "DATA "
+     end
+
+     if $frame_type & 0x4
+           printf "CTRL "
+     end
+
+     if $frame_type & 0x8
+           printf "ASSOC_REQ "
+     end
+
+     if $frame_type & 0x10
+           printf "ASSOC_RES "
+     end
+
+     if $frame_type & 0x20
+           printf "REASSOC_REQ "
+     end
+
+     if $frame_type & 0x40
+           printf "REASSOC_RES "
+     end
+
+     if $frame_type & 0x80
+           printf "PROBE_REQ "
+     end
+
+     if $frame_type & 0x100
+           printf "PROBE_RES "
+     end
+
+     if $frame_type & 0x200
+           printf "BEACON "
+     end
+
+     if $frame_type & 0x400
+           printf "ATIM "
+     end
+
+     if $frame_type & 0x800
+           printf "DISASSOC "
+     end
+
+     if $frame_type & 0x1000
+           printf "AUTH "
+     end
+
+     if $frame_type & 0x2000
+           printf "DEAUTH "
+     end
+
+     if $frame_type & 0x4000
+           printf "ACTION "
+     end
+
+     if $frame_type & 0x8000
+           printf "BAR "
+     end
+
+     if $frame_type & 0x10000
+           printf "BA "
+     end
+
+     if $frame_type & 0x20000
+           printf "PSPOLL "
+     end
+
+     if $frame_type & 0x40000
+           printf "RTS "
+     end
+
+     if $frame_type & 0x80000
+           printf "CTS "
+     end
+
+     if $frame_type & 0x100000
+           printf "ACK "
+     end
+
+     if $frame_type & 0x200000
+           printf "CFEND "
+     end
+
+     if $frame_type & 0x400000
+           printf "CFENDCFACK "
+     end
+
+     if $frame_type & 0x800000
+           printf "CBF "
+     end
+
+     if $frame_type & 0x40000000
+           printf "PHY_ERR "
+     end
+
+     if $frame_type & 0x80000000
+           printf "CRC_ERR "
+     end
+
+     printf "\n"
+
+  end
+
+  printf "-----------------------------------------\n"
+
+  set $index += 1
+ end
+end
+
+# RX Ring Config
+define ring_cfg
+
+set $index=0 
+printf "\n"
+
+printf "\n---------- Global Config ---------------\n" 
+
+set $addr = 0x30c34
+printf " ole decap conf (0x%x) : 0x%08x", $addr, *(long *) $addr
+set $val = *(long *) $addr
+printf " (enable_decap:%d,",  $val & 0x1
+printf " target_format:%d",  ($val >> 1) & 0x1
+if $val & 0x1
+  if $val & 0x2
+   printf " (eth format)"
+  else
+   printf " (native wifi)"
+  end
+else
+  printf " (raw mode)"
+end
+printf ")\n"
+
+set $addr = 0x30c20
+printf " ole rx conf    (0x%x) : 0x%08x", $addr, *(long *) $addr
+set $val = *(long *) $addr
+printf " (rx hdr bytes:%d)\n",  $val & 0xFF
+
+printf "------------------------------------------\n" 
+
+while ($index < 4)
+  set $ring_config = 0x30c24 + ($index * 4)
+  set $is_local = recvStruct.rx_ring_cfg[$index].is_local
+  set $base_addr = recvStruct.rx_ring_cfg[$index].base_addr
+
+  if $base_addr != 0
+     printf "\n------------- RX Ring %d ", $index
+     if $is_local == 1
+           printf "(Mapped to FW Memory)"
+     else
+           printf "(Mapped to Host Memory)"
+     end
+     printf " --------------\n"
+
+     printf " ole rx conf ring  (0x%x) : 0x%08x", $ring_config, *(long *) $ring_config
+     set $val = *(long *) $ring_config
+     printf " (eth_3:%d,",  ($val >> 27 ) & 0x1
+     printf " eth_2:%d,",  ($val >> 26 ) & 0x1
+     printf " eth_1:%d,",  ($val >> 25 ) & 0x1
+     printf " eth_0:%d,",  ($val >> 24 ) & 0x1
+     printf " phy_data:%d,",  ($val >> 21 ) & 0x1
+     printf " null_data:%d,",  ($val >> 20 ) & 0x1
+     printf " mcast:%d,",  ($val >> 19 ) & 0x1
+     printf " ucast:%d,",  ($val >> 18 ) & 0x1
+     printf " mgmt:%d,\n\t\t\t\t\t  ",  ($val >> 17 ) & 0x1
+     printf " ctrl:%d,",  ($val >> 16 ) & 0x1
+     printf " frag_info:%d,",  ($val >> 9 ) & 0x1
+     printf " atten:%d,",  ($val >> 8 ) & 0x1
+     printf " ppdu_end:%d,",  ($val >> 7 ) & 0x1
+     printf " mpdu_end:%d,",  ($val >> 6 ) & 0x1
+     printf " msdu_end:%d,",  ($val >> 5 ) & 0x1
+     printf " rx_pkt:%d,\n\t\t\t\t\t  ",  ($val >> 4 ) & 0x1
+     printf " msdu_start:%d,",  ($val >> 3 ) & 0x1
+     printf " mpdu_start:%d,",  ($val >> 2 ) & 0x1
+     printf " rx_hdr:%d,",  ($val >> 1 ) & 0x1
+     printf " ppdu_start:%d)\n",  $val & 0x1
+
+     set $addr = 0x30800 + ($index * 32)
+     printf " rxdma cfg ring%d_0 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (base_addr: 0x%x)\n", $val
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_1 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (buf_len: %d, num_desc: %d)\n", ($val >> 16) & 0xFFFF, $val & 0xFFFF
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_2 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (fraginfo_swap: %d,", ($val >> 25) & 0x1
+     printf " atten_swap: %d,", ($val >> 24) & 0x1
+     printf " msdu_end_swap: %d,", ($val >> 23) & 0x1
+     printf " msdu_start_swap: %d,", ($val >> 22) & 0x1
+     printf " mpdu_end_swap: %d,\n\t\t\t\t\t  ", ($val >> 21) & 0x1
+     printf " mpdu_start_swap: %d,", ($val >> 20) & 0x1
+     printf " ppdu_end_swap: %d,", ($val >> 19) & 0x1
+     printf " ppud_start_swap: %d,", ($val >> 18) & 0x1
+     printf " pkt_swap: %d,", ($val >> 17) & 0x1
+     printf " hdr_swap: %d,\n\t\t\t\t\t  ", ($val >> 16) & 0x1
+     printf " lwm_thresh: %d)\n", $val & 0xFF
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_3 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (rx_pkt_offset: %d,", ($val >> 18) & 0xFF
+     printf " rx_hdr_offset: %d)\n", ($val >> 2) & 0xFF
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_4 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (ppdu_end_offset: %d,", ($val >> 18) & 0xFF
+     printf " ppdu_start_offset: %d)\n", ($val >> 2) & 0xFF
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_5 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (mpdu_end_offset: %d,", ($val >> 18) & 0xFF
+     printf " mpdu_start_offset: %d)\n", ($val >> 2) & 0xFF
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_6 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (msdu_end_offset: %d,", ($val >> 18) & 0xFF
+     printf " msdu_start_offset: %d)\n", ($val >> 2) & 0xFF
+
+     set $addr = $addr + 0x4
+     printf " rxdma cfg ring%d_7 (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (fraginfo_offset: %d,", ($val >> 18) & 0xFF
+     printf " atten_offset: %d)\n", ($val >> 2) & 0xFF
+
+     set $addr = 0x30880 + ($index * 4)
+     printf " rxdma en act_%d    (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (ring_active: %d,", ($val >> 1) & 0x1
+     printf " ring_enable: %d)\n", $val & 0x1
+
+     set $addr = 0x30890 + ($index * 4)
+     printf " rxdma idx_%d       (0x%x) : 0x%08x", $index, $addr, *(long *) $addr
+     set $val = *(long *) $addr
+     printf " (hw_index: %d,", ($val >> 16) & 0xFFFF
+     printf " fw_index: %d)\n", $val & 0xFFFF
+
+     printf "\n"
+     p/x recvStruct.rx_ring_cfg[$index]
+
+     printf "-------------------------------------------------------------\n"
+ else
+     printf "\n------------- RX Ring %d (not configured) --------------\n", $index
+ end
+
+     set $index+=1
+end
+end
+ 
+# CE Registers
+define ce_reg
+
+set $index=0 
+printf "\n"
+while ($index < 12)
+  set $ce_base = 0x4a000 + (0x400 * $index)
+  printf "------------- CE %d --------------\n", $index
+  printf "src ring base (0x%x) : 0x%08x\n", $ce_base, *(long *) $ce_base
+  printf "src ring size (0x%x) : %d\n",   $ce_base + 0x4, *(long *) ($ce_base + 0x4)
+  printf "dst ring base (0x%x) : 0x%08x\n", $ce_base + 0x8, *(long *) ($ce_base + 0x8)
+  printf "dst ring size (0x%x) : %d\n",   $ce_base + 0xc, *(long *) ($ce_base + 0xc)
+
+  set $val = *(long *) ($ce_base + 0x10)
+  printf " ce ctrl reg1 (0x%x) : 0x%08x", $ce_base + 0x10, $val
+  printf " (msi_en:%d,", ($val >> 18) & 0x1
+  printf " dst_byte_swap:%d,", ($val >> 17) & 0x1
+  printf " src_byte_swap:%d,", ($val >> 16) & 0x1
+  printf " dst_buf_max_size:%d)\n", ($val & 0xFFFF)
+
+  set $val = *(long *) ($ce_base + 0x14)
+  printf " ce ctrl reg2 (0x%x) : 0x%08x", $ce_base + 0x14, $val
+  printf " (num_axi_outstd_wr:%d,", ($val >> 25) & 0x1F
+  printf " num_axi_outstd_rd:%d,", ($val >> 20) & 0x1F
+  printf " axi_timout:%d,", ($val >> 4) & 0xFFFF
+  printf " dst_axi_max_len:%d,", ($val >> 2) & 0x3
+  printf " src_axi_max_len:%d)\n", ($val & 0x3)
+
+  set $val = *(long *) ($ce_base + 0x18)
+  printf " ce cmd  reg  (0x%x) : 0x%08x", $ce_base + 0x18, $val
+  printf " (halt_comp:%d,", ($val >> 3) & 0x1
+  printf " dst_flush:%d,", ($val >> 2) & 0x1
+  printf " src_flush:%d,", ($val >> 1) & 0x1
+  printf " halt:%d)\n", ($val & 0x1)
+
+  printf "msi addr reg  (0x%x) : 0x%08x\n", $ce_base + 0x1c, *(long *) ($ce_base + 0x1c)
+  printf "msi data reg  (0x%x) : 0x%08x\n", $ce_base + 0x20, *(long *) ($ce_base + 0x20)
+
+  set $val = *(long *) ($ce_base + 0x24)
+  printf " tgt ie  reg  (0x%x) : 0x%08x", $ce_base + 0x24, $val
+  printf " (dst_lwmark:%d,", ($val >> 4) & 0x1
+  printf " dst_hwmark:%d,", ($val >> 3) & 0x1
+  printf " src_lwmark:%d,", ($val >> 2) & 0x1
+  printf " src_hwmark:%d,", ($val >> 1) & 0x1
+  printf " copy_comp:%d)\n", ($val & 0x1)
+
+  set $val = *(long *) ($ce_base + 0x28)
+  printf " tgt is  reg  (0x%x) : 0x%08x", $ce_base + 0x28, $val
+  printf " (dst_lwmark:%d,", ($val >> 4) & 0x1
+  printf " dst_hwmark:%d,", ($val >> 3) & 0x1
+  printf " src_lwmark:%d,", ($val >> 2) & 0x1
+  printf " src_hwmark:%d,", ($val >> 1) & 0x1
+  printf " copy_comp:%d)\n", ($val & 0x1)
+ 
+  set $val = *(long *) ($ce_base + 0x2c)
+  printf "host ie  reg  (0x%x) : 0x%08x", $ce_base + 0x2c, $val
+  printf " (dst_lwmark:%d,", ($val >> 4) & 0x1
+  printf " dst_hwmark:%d,", ($val >> 3) & 0x1
+  printf " src_lwmark:%d,", ($val >> 2) & 0x1
+  printf " src_hwmark:%d,", ($val >> 1) & 0x1
+  printf " copy_comp:%d)\n", ($val & 0x1)
+ 
+  set $val = *(long *) ($ce_base + 0x30)
+  printf "host is  reg  (0x%x) : 0x%08x", ($ce_base + 0x30), $val
+  printf " (dst_lwmark:%d,", ($val >> 4) & 0x1
+  printf " dst_hwmark:%d,", ($val >> 3) & 0x1
+  printf " src_lwmark:%d,", ($val >> 2) & 0x1
+  printf " src_hwmark:%d,", ($val >> 1) & 0x1
+  printf " copy_comp:%d)\n", ($val & 0x1)
+ 
+  set $val = *(long *) ($ce_base + 0x34)
+  printf "misc ie  reg  (0x%x) : 0x%08x", $ce_base + 0x34, $val
+  printf " (axi:%d, ", ($val >> 10) & 0x1
+  printf "dst_addr:%d, ", ($val >> 9) & 0x1
+  printf "src_len:%d, ", ($val >> 8) & 0x1
+  printf "dst_max:%d, ", ($val >> 7) & 0x1
+  printf "dst_overflow:%d, ", ($val >> 6) & 0x1
+  printf "src_overflow:%d,\n\t\t\t\t", ($val >> 5) & 0x1
+  printf "      dst_lwmark:%d, ", ($val >> 4) & 0x1
+  printf "dst_hwmark:%d, ", ($val >> 3) & 0x1
+  printf "src_lwmark:%d, ", ($val >> 2) & 0x1
+  printf "src_hwmark:%d, ", ($val >> 1) & 0x1
+  printf "copy_comp:%d)\n", ($val & 0x1)
+
+  set $val = *(long *) ($ce_base + 0x38)
+  printf "misc is  reg  (0x%x) : 0x%08x", $ce_base + 0x38, $val
+  printf " (axi:%d, ", ($val >> 10) & 0x1
+  printf "dst_addr:%d, ", ($val >> 9) & 0x1
+  printf "src_len:%d, ", ($val >> 8) & 0x1
+  printf "dst_max:%d, ", ($val >> 7) & 0x1
+  printf "dst_overflow:%d, ", ($val >> 6) & 0x1
+  printf "src_overflow:%d,\n\t\t\t\t", ($val >> 5) & 0x1
+  printf "      dst_lwmark:%d, ", ($val >> 4) & 0x1
+  printf "dst_hwmark:%d, ", ($val >> 3) & 0x1
+  printf "src_lwmark:%d, ", ($val >> 2) & 0x1
+  printf "src_hwmark:%d, ", ($val >> 1) & 0x1
+  printf "copy_comp:%d)\n", ($val & 0x1)
+
+  printf "src wr index  (0x%x) : 0x%08x\n", $ce_base + 0x3c, *(long *) ($ce_base + 0x3c)
+  printf "dst wr index  (0x%x) : 0x%08x\n", $ce_base + 0x40, *(long *) ($ce_base + 0x40)
+  printf "src rd index  (0x%x) : 0x%08x\n", $ce_base + 0x44, *(long *) ($ce_base + 0x44)
+  printf "dst rd index  (0x%x) : 0x%08x\n", $ce_base + 0x48, *(long *) ($ce_base + 0x48)
+
+  set $val = *(long *) ($ce_base + 0x4c)
+  printf "src watermark (0x%x) : 0x%08x", $ce_base + 0x4c, $val
+  printf " (src_lwmark:%d, ", ($val >> 16)
+  printf "src_hwmark:%d)\n", ($val & 0xFFFF)
+
+  set $val = *(long *) ($ce_base + 0x50)
+  printf "dst watermark (0x%x) : 0x%08x", $ce_base + 0x50, $val
+  printf " (dst_lwmark:%d, ", ($val >> 16)
+  printf "dst_hwmark:%d)\n", ($val & 0xFFFF)
+
+  printf "ce debug reg  (0x%x) : 0x%08x\n", $ce_base + 0x54, *(long *) ($ce_base + 0x54)
+  printf "ce watchdog   (0x%x) : 0x%08x\n", $ce_base + 0x58, *(long *) ($ce_base + 0x58)
+  printf "----------------------------------\n\n"
+  set $index+=1
+end
+
+end
+
+# FW Stats
+define fw_stats
+p/d *g_dbg_wal_stats_wifi2
+p/d *g_dbg_wal_stats
+printf "Remaining Bytes:\n"
+printf "DRAM : %d bytes\n", arenas[0].remaining_bytes
+printf "IRAM : %d bytes\n", arenas[1].remaining_bytes
+printf "SRAM : %d bytes\n", arenas[3].remaining_bytes
+end
+
+#Dump sched cmd ring
+define sch_cmd
+set $hw_q_id=0
+set $size=0
+set $size_loop=0
+
+printf "------------------------\n"
+printf "Schedule Cmd Ring Config\n"
+printf "------------------------\n"
+p/x g_schd_cfg
+
+printf "Inspecting valid schedule commands in the ring...\n"
+
+# Dump 12 HW Q
+while ($hw_q_id < 12)
+  if (struct scheduler_cmd *)g_schd_cfg[$hw_q_id].base != 0
+         set $size=(struct scheduler_cmd *)g_schd_cfg[$hw_q_id].size 
+	 set $size_loop=0
+         while ($size_loop < $size)
+           set $sch_id=((struct scheduler_cmd *)g_schd_cfg[$hw_q_id].base+$size_loop).schedule_id
+           if $sch_id != 0
+	     printf "---------------------\n"
+	     printf "hw q :%d (slot : %d)\n", $hw_q_id, $size_loop
+	     printf "---------------------\n"
+             p/x *((struct scheduler_cmd *)g_schd_cfg[$hw_q_id].base+$size_loop)
+	    
+             set $scheduler_tlv_ptr=((struct scheduler_cmd *)g_schd_cfg[$hw_q_id].base+$size_loop).scheduler_tlv_ptr
+             set $scheduler_tlv_ptr=($scheduler_tlv_ptr&0xFFFFF)|0x400000
+	     set $tag=((struct hwsched_su_pdg_desc *)$scheduler_tlv_ptr).tag
+
+             # SU SW PDG 
+	     if ($tag == 0xac7a0174)
+		printf "SU SW PDG:\n"  
+	        p/x *(struct hwsched_su_sw_pdg_desc *)$scheduler_tlv_ptr
+             end
+
+	     # SU PDG	
+	     if ($tag == 0xac7a01e0)
+		printf "SU PDG:\n"  
+	        p/x *(struct hwsched_su_pdg_desc *)$scheduler_tlv_ptr
+             end
+
+	     # MU PDG	
+	     if ($tag == 0xac7a04b0 )
+		printf "MU PDG:\n"  
+	        p/x *(struct hwsched_mu_pdg_desc *)$scheduler_tlv_ptr
+             end
+	
+           end 
+           set $size_loop += 1 
+         end
+  end
+  set $hw_q_id += 1
+end
+end
+
+# hwsched_status_desc
+define tx_tlv
+set $my_index=0
+while ($my_index < 32)
+	set $tag=((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->tlv_tag->tag
+	if $tag==0x7b
+		printf "-----------------------------------\n"
+		printf " SCHDULER SCH STATUS (slot: %d)\n", $my_index
+		set $end_time=((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->desc.sch_status.sch_eval_end_timestamp
+		set $start_time=((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->desc.sch_status.sch_eval_start_timestamp
+		set $time_diff=($end_time-$start_time)/1000
+		printf " Time taken : %d millisec (%d microsec)\n", $time_diff , $end_time-$start_time
+		printf "-----------------------------------\n"
+		print ((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->tlv_tag
+		print  ((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->desc.sch_status
+	else
+	if $tag==0x86
+		printf "-----------------------\n"
+		printf " FES STATUS (slot: %d)\n", $my_index
+		printf "-----------------------\n"
+		print ((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->tlv_tag
+		print  ((struct hwsched_status_desc *)g_status_cfg.base+$my_index)->desc.fes_status
+	else
+		printf " **** UNKNOWN (slot: %d, tag %d) ****\n", $my_index, $tag
+	end
+	end
+  set $my_index += 1
+end
+end
+
+define qcache_dump
+  set $my_index = 0
+  while ($my_index < g_pdev_p->cfg_tgt.num_peers)
+     
+     set $state = g_qcache_ctxt.qcache_peer_tbl[$my_index].peer_state
+   
+     if  $state & 0x1
+
+       printf "Peer no  : %d (qcache_peer_tbl index)\n", $my_index
+       printf "upeer_id : %d (peer_tbl index)\n", g_qcache_ctxt.qcache_peer_tbl[$my_index].upeer_id
+       printf "  State  : 0x%x (", $state
+
+       if $state & 0x1
+       printf "VALID"
+       end
+
+       if $state & 0x2
+       printf ", ACTIVE"
+       end
+
+       if $state & 0x4
+       printf ", NO_EVICT" 
+       end
+
+       if $state & 0x8
+       printf ", POWERSAVE"	
+       end
+
+       if $state & 0x10
+       printf ", MU_CAPABLE"	
+       end
+
+       if $state & 0x20
+       printf ", SENDN_PENDING"	
+       end
+
+       if $state & 0x40
+       printf ", CONNECTED_AUTHORIZED"
+       end
+
+       if $state & 0x80
+       printf ", ATF"
+       end
+
+       printf ")\n"	
+
+       set $upeer_id = g_qcache_ctxt.qcache_peer_tbl[$my_index].upeer_id
+       set $mac5=g_pdev_p->peer_tbl[$upeer_id].ni_macaddr.mac_addr31to0 & 0xff
+       set $mac4=g_pdev_p->peer_tbl[$upeer_id].ni_macaddr.mac_addr31to0>>8 & 0xff
+       set $mac3=g_pdev_p->peer_tbl[$upeer_id].ni_macaddr.mac_addr31to0>>16 & 0xff
+       set $mac2=g_pdev_p->peer_tbl[$upeer_id].ni_macaddr.mac_addr31to0>>24 & 0xff
+       set $mac1=g_pdev_p->peer_tbl[$upeer_id].ni_macaddr.mac_addr47to32 & 0xff
+       set $mac0=g_pdev_p->peer_tbl[$upeer_id].ni_macaddr.mac_addr47to32>>8 & 0xff
+
+       set $null_mac = $mac0==0 && $mac1==0 && $mac2==0 && $mac3==0 && $mac4==0 && $mac5==0
+
+       if $null_mac==0
+       printf "    MAC  : %02x:%02x:%02x:%02x:%02x:%02x  \n", $mac5, $mac4, $mac3, $mac2, $mac1, $mac0
+       end
+        
+       printf  "TID State : \n"
+       p/x g_qcache_ctxt.qcache_peer_tbl[$my_index].tid_state
+
+#      printf "\tWLAN_PEER\n"	
+#      p/x g_pdev_p->peer_tbl[$upeer_id]
+#      printf "\tWAL_PEER\n"	
+#      p/x *(wal_peer_t *)g_pdev_p->peer_tbl[$upeer_id].wal_peer
+
+       printf "\n-----------------------------------------\n"
+     end
+       set $my_index += 1
+  end
+ 
+end
+
+#define Module ID to Pause ID
+define module_id_to_pause_id
+ set $max_entry = g_module_id_ctx->max_module_id
+ set $index=0
+ printf "--------------------\n"
+ printf "Module ID : Pause ID\n"
+ printf "--------------------\n"
+ while $index <  $max_entry
+   printf "       %2d : 0x%x\n",  $index, g_module_id_ctx->table[$index]
+   set $index +=1
+ end
+ printf "--------------------\n"
+end
+
+define my_decode
+
+	# Enable this to process AST entries too.
+	set $decode_ast_enrties=0
+
+	printf "\n########################################################################################\n"
+	printf "\t\t\t\t Parent Device (pdev)\n"
+	printf "\t Operating Channel : %d Mhz\n", ((wal_pdev_t *)g_pdev_p->pdev_handle)->cur_channel.mhz
+	printf "\t           Mode    : "
+	set $op_mode=((wal_pdev_t *)g_pdev_p->pdev_handle)->cur_channel.phy_mode
+
+	if $op_mode==0
+		printf "11A\n"
+	end
+	if $op_mode==1
+		printf "11BG\n"
+	end
+	if $op_mode==2
+		printf "11B\n"
+	end
+	if $op_mode==3
+		printf "11G\n"
+	end
+	if $op_mode==4
+		printf "11A HT20\n"
+	end
+	if $op_mode==5
+		printf "11G HT20\n"
+	end
+	if $op_mode==6
+		printf "11A HT40\n"
+	end
+	if $op_mode==7
+		printf "11G HT40\n"
+	end
+	if $op_mode==8
+		printf "11AC VHT20\n"
+	end
+	if $op_mode==9
+		printf "11AC VHT40\n"
+	end
+	if $op_mode==10
+		printf "11AC VHT80\n"
+	end
+	if $op_mode==11
+		printf "11AC VHT20_2G\n"
+	end
+	if $op_mode==12
+		printf "11AC VHT40_2G\n"
+	end
+	if $op_mode==12
+		printf "11AC VHT80_2G\n"
+	end
+
+#	printf "\t      Channel list : "
+#	set $total_ch=((wlan_scan_sch_t *) g_pdev_p->scan_sch_handle)->scan_handle.num_supported_chans
+#	set $i=0
+#	while ($i<$total_ch)
+#		printf "%d ", ((wlan_scan_sch_t *) g_pdev_p->scan_sch_handle)->scan_handle.sup_chan_list[$i].chan.mhz
+#		set $i+=1
+#		if (($i % 12) == 0) && ($i != $total_ch)
+#		   printf "\n\t\t\t     "
+#		end
+#	end
+	printf "\n"
+
+#       set $tx_chain=((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).cfg.devcap.n_valid_tx_chain
+#	set $rx_chain=((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).cfg.devcap.n_valid_rx_chain
+
+	set $tx_chain=resetStruct.txChainMaskSw
+	# count number of 1's
+        set $count=0
+        while $tx_chain > 0 
+              if $tx_chain & 0x1 
+                  set $count +=1
+              end 
+                  set $tx_chain >>=1
+        end
+        set $tx_chain = $count
+ 
+	# TODO: Remove below redundant code
+	# count number of 1's
+	set $rx_chain=resetStruct.rxChainMaskSw
+	set $count=0
+        while $rx_chain > 0 
+        if $rx_chain & 0x1 
+             set $count +=1
+        end 
+        set $rx_chain >>=1
+        end
+        set $rx_chain = $count
+ 
+	printf "\t\t Chain     : %d x %d\n", $tx_chain, $rx_chain
+	printf "########################################################################################\n"
+
+	p/x *g_pdev_p
+
+	printf "------------------------------------------------\n"
+	printf "--               WAL PDEV                    ---\n"
+	printf "------------------------------------------------\n"
+        p/x *(wal_pdev_t *)g_pdev_p->pdev_handle
+
+        printf "--------------------------------\n" 
+	printf "---   BA Pool (ba_handle)    ---\n"
+        printf "--------------------------------\n" 
+	p/x *(wlan_ba_handle_t) (wal_pdev_t *)g_pdev_p->ba_handle
+	printf "peer_pool :\n"
+	x/5 ((wlan_ba_handle_t) (wal_pdev_t *)g_pdev_p->ba_handle).peer_pool
+	printf "tx_sm_ctxt_pool:\n"
+	x/5 ((wlan_ba_handle_t) (wal_pdev_t *)g_pdev_p->ba_handle).tx_sm_ctxt_pool
+
+	set $vdev_index=0
+	set $total_ap_vap=0
+	set $total_sta_vap=0
+	set $total_mon_vap=0
+	set $total_ibss_vap=0
+	while ($vdev_index < g_pdev_p->cfg_tgt.num_vdevs)
+
+ 	    if ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).is_free==0
+
+		 printf "\n###################################################################################################\n"
+		 printf "\t\t\t\t Virtual Device %d \n", $vdev_index
+
+		 set $op_mode=((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).ic_opmode
+	 	 if $op_mode==0
+		   	printf " Mode      : IBSS"
+			set $total_ibss_vap +=1
+	         end
+	 	 if $op_mode==0x1
+		 	printf " Mode      : Station"
+			set $total_sta_vap +=1
+		 end
+		 if $op_mode==0x2
+		 	printf " Mode      : AP"
+			set $total_ap_vap +=1
+		 end
+	 	 if $op_mode==0x3
+	  	 	printf " Mode      : Monitor"
+			set $total_mon_vap +=1
+	 	 end
+
+		 if (((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).ifUp)
+			printf " (up, "
+		 else
+			printf " (down, "
+		 end
+
+		 if (((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).ifPaused)
+			printf "paused)\n"
+		 else
+			printf "not paused)\n"
+		 end
+
+		 # Number of peer	
+		 # set $total_peer=(wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index].num_peer
+		 # Peer caching is enabled, so, we need to consider only number of active peer
+		 set $total_peer = g_pdev_p->cfg_tgt.num_active_peers
+		 set $i=0
+		 set $had_valid_peer=0
+		 set $last_valid_peer_cnt=0
+		 printf " Peers     : "
+		 while($i < $total_peer)
+                      if(g_pdev_p->vdev_array[$vdev_index]->peer_tbl[$i])
+		       set $vdev_ptr = ((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).pDev
+		       if $vdev_ptr == g_pdev_p->vdev_array[$vdev_index]
+   		         set $mac5=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0 & 0xff
+		         set $mac4=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0>>8 & 0xff
+		         set $mac3=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0>>16 & 0xff
+		         set $mac2=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0>>24 & 0xff
+		         set $mac1=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr47to32 & 0xff
+		         set $mac0=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr47to32>>8 & 0xff
+
+		         set $null_mac = $mac0==0 && $mac1==0 && $mac2==0 && $mac3==0 && $mac4==0 && $mac5==0
+
+		         if $null_mac==0
+		          printf "%02x:%02x:%02x:%02x:%02x:%02x  ", $mac5, $mac4, $mac3, $mac2, $mac1, $mac0
+			  set $had_valid_peer += 1
+		         end
+
+		         if (($had_valid_peer%5)==0) && ($last_valid_peer_cnt != $had_valid_peer)
+		          printf "\n             "
+		          set $last_valid_peer_cnt = $had_valid_peer
+		         end	
+                        end  	
+                       end  
+		      set $i += 1	
+		 end
+		 if $had_valid_peer==0
+			printf "List is empty"
+		 end
+
+		 printf "\n###################################################################################################\n"
+
+		 # print vdev details
+		 printf "------------------------------------------------\n"
+		 printf "--               WLAN VDEV                   ---\n"
+		 printf "------------------------------------------------\n"
+   	         p/x *(wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]
+
+                 printf "--------------------------------\n" 
+		 printf "--- Rate Context (pRateCtrl) ---\n"
+                 printf "--------------------------------\n" 
+		 p/x  *(RATE_CONTEXT *)((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index])->pRateCtrl
+
+		 printf "------------------------------------------------\n"
+		 printf "--               WAL VDEV                    ---\n"
+		 printf "------------------------------------------------\n"
+		 p/x *(wal_vdev_t *)((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index])->vdev_handle
+
+		 # print peer details
+		 set $i=0
+		 while($i < $total_peer)
+		       set $vdev_ptr = ((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).pDev
+		       if $vdev_ptr == g_pdev_p->vdev_array[$vdev_index]
+		        set $mac5=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0 & 0xff
+		        set $mac4=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0>>8 & 0xff
+		        set $mac3=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0>>16 & 0xff
+		        set $mac2=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0>>24 & 0xff
+		        set $mac1=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr47to32 & 0xff
+		        set $mac0=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr47to32>>8 & 0xff
+
+		        set $peer_mac_31to0=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr31to0
+		        set $peer_mac_47to32=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_macaddr.mac_addr47to32
+
+		        set $null_mac = $mac0==0 && $mac1==0 && $mac2==0 && $mac3==0 && $mac4==0 && $mac5==0
+
+		        if $null_mac==0
+			 printf "-------------------------------------------------\n"
+		         printf "  Peer mac : %02x:%02x:%02x:%02x:%02x:%02x \n", $mac5, $mac4, $mac3, $mac2, $mac1, $mac0
+			 printf  "  Slot     : %d\n", $i
+			 # Decode conn state
+			 set $conn_state=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).conn_state
+			 printf "  Connection status (0x%x) : ", $conn_state
+			 if ($conn_state==0)
+				printf "Default state\n"
+			 else
+			 if ($conn_state==1)
+				printf "Try to authenticate\n"
+			 else
+			 if ($conn_state==2)
+				printf "Try to associate\n"
+			 else
+			 if ($conn_state==3)
+				printf "Associated\n"
+			 end
+			 end
+			 end
+			 end
+
+			 # ni_flags decode
+			 set $ni_flags=((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).ni_flags
+			 printf "  ni flags (0x%x) :\n", $ni_flags
+			 if ($ni_flags & 0x1)
+				printf "   Authorized for data\n"
+			 end
+			 if ($ni_flags & 0x2)
+				printf "   Qos enabled\n"
+			 end 
+			 if ($ni_flags & 0x4)
+				printf "   Needs 4-way hs to allow data\n"
+			 end
+			 if ($ni_flags & 0x8)
+				printf "   Group key installed\n"
+			 end
+			 if ($ni_flags & 0x10)
+				printf "   Needs gtk 2-way after 4-way handshake\n"
+			 end
+			 if ($ni_flags & 0x20)
+				printf "   Encryption enabled\n"
+			 end
+			 if ($ni_flags & 0x40)
+				printf "   Pairwise key installed\n"
+			 end
+			 if ($ni_flags & 0x80)
+				printf "   TKIP counter measures enabled\n"
+			 end
+			 if ($ni_flags & 0x100)
+				printf "   S/W demic of frag train\n"
+			 end
+			 if ($ni_flags & 0x200)
+				printf "   CCX enabled\n"
+			 end
+			 if ($ni_flags & 0x400)
+				printf "   APSD supported\n"
+			 end
+			 if ($ni_flags & 0x1000)
+				printf "   HT IEs arrived in assoc resp\n"
+			 end
+			 if ($ni_flags & 0x2000)
+				printf "   40 Mhz mode supported\n"
+			 end
+			 if ($ni_flags & 0x4000)
+				printf "   HT mode can be disallowed by firmware\n"
+			 end
+			 if ($ni_flags & 0x8000)
+				printf "   STBC\n"
+			 end
+			 if ($ni_flags & 0x10000)
+				printf "   LDPC\n"
+			 end
+			 if ($ni_flags & 0x20000)
+				printf "   Dynamic mimo power save\n"
+			 end
+			 if ($ni_flags & 0x40000)
+				printf "   Static mimo power save\n"
+			 end
+			 if ($ni_flags & 0x80000)
+				printf "   Mimo power save enabled\n"
+			 end
+			 if ($ni_flags & 0x100000)
+				printf "   Enabled spatial expansin..\n"
+			 end
+			 if ($ni_flags & 0x200000)
+				printf "   Allow rate ctrl to use only >1 spatial stream rates\n"
+			 end
+			 if ($ni_flags & 0x400000)
+				printf "   Tx beaconforming enabled\n"
+			 end
+			 if ($ni_flags & 0x800000)
+				printf "   Sw retry enabled\n"
+			 end
+			 if ($ni_flags & 0x1000000)
+				printf "   WPS enabled\n"
+			 end
+			 if ($ni_flags & 0x2000000)
+				printf "   11ac vht "
+			 	if ($ni_flags & 0x4000000)
+				printf " (80mhz)\n"
+				else
+					if ($ni_flags & 0x002000)
+					printf "(40mhz) \n"
+					else
+					printf "(20mhz)\n"
+					end
+				end
+			 end
+			 if ($ni_flags & 0x10000000)
+				printf "   PMF enabled\n"
+			 end
+
+			 printf "-------------------------------------------------\n"
+
+			 # WLAN peer
+			 printf "------------------------------------------------\n"
+			 printf "--               WLAN PEER                   ---\n"
+			 printf "------------------------------------------------\n"
+		 	 p/x ((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i])
+
+	  		 set $ba_handle = (((wlan_peer_t) ((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i])).ba_peer_handle
+
+			 if $ba_handle != 0
+	                    printf "-------------------------------------\n" 
+			    printf "---    BA Handle (ba_peer_handle) ---\n"
+                	    printf "-------------------------------------\n" 
+		 	    p/x *(wlan_ba_peer_handle_t)$ba_handle
+
+			    set $tx_state_bmap = ((wlan_ba_peer_handle_t)$ba_handle).tx_state_bmap
+  		            set $j=0
+			    printf " -- tx_state_bmap -- \n"	
+                            while $j<16
+				printf "  TID %2d : ", $j
+				set $state = $tx_state_bmap & 0xF
+				if $state == 0
+					printf "BA_NOT_SETUP\n"
+				end
+				if $state == 1
+					printf "WAIT_BLOCK_COMPLETE\n"
+				end
+				if $state == 2
+					printf "BA_IN_PROGRESS\n"
+				end
+				if $state == 3
+					printf "BA_EXCESS_RETRY\n"
+				end
+				if $state == 4
+					printf "BA_SETUP\n"
+				end
+				if $state == 5
+					printf "BA_TEARDOWN\n"
+				end
+				if $state == 6
+					printf "BA_TIMEOUT\n"
+				end
+
+				set $tx_state_bmap = $tx_state_bmap >> 4
+				set $j+=1	
+			    end 		
+			 end
+		
+	                 printf "--------------------------------\n" 
+			 printf "---    Rate Node (rc_node)   ---\n"
+                	 printf "--------------------------------\n" 
+			 p/x *(struct rate_node *)(wlan_peer_t) (((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).rc_node
+
+			 # WAL peer
+			 printf "------------------------------------------------\n"
+			 printf "--               WAL PEER                    ---\n"
+			 printf "------------------------------------------------\n"
+ 			 p/x  *(wal_peer_t *) (((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).wal_peer
+
+			 # TID Q
+			 set $cur_tid=((wal_peer_t *) (((wlan_vdev_t*)g_pdev_p->vdev_array[$vdev_index]).peer_tbl[$i]).wal_peer).tid_list.stqh_first
+			 while ($cur_tid)
+				printf "------------------------------------------\n"
+				printf "TID (0x%x) : %d ", $cur_tid, $cur_tid->tid_num
+				if $cur_tid->tid_num==0
+				 	printf " (default, "
+				end
+				if $cur_tid->tid_num>0 &&  $cur_tid->tid_num<=16
+				 	printf " (non qos, "
+				end
+				if $cur_tid->tid_num==17
+				 	printf " (mgmt tid, "
+				end
+				if $cur_tid->tid_num==18
+				 	printf " (beacon tid, "
+				end
+				if $cur_tid->tid_num==19
+				 	printf " (non pause tid, "
+				end
+				if $cur_tid->tid_num>19
+				 	printf " (invalid, "
+				end
+
+				if $cur_tid->tid_flags & 0x2
+					printf "paused)\n"
+				else
+					printf "not paused)\n"
+				end
+				printf "Total frames enqueued          : %d\n", $cur_tid->tx_state->stateless->frameq->num_mpdus
+				printf "Frames picked by s/w scheduler : %d\n", $cur_tid->tx_state->stateless->num_queued_sched_cmds
+				printf "Frames queued in hw            : %d\n", $cur_tid->tx_state->stateless->num_queued_msdus
+				printf "------------------------------------------\n"
+				p/x *$cur_tid
+			   
+				if $cur_tid->link_node_tid
+					set $cur_tid = $cur_tid->link_node_tid->stqe_next
+				else
+					set $cur_tid = 0
+			   	end
+			 end
+
+			 if $decode_ast_enrties!=0
+			   # AST entries
+			   printf "------------------------------------------------\n"
+			   printf "---              AST ENTRIES                 ---\n"
+			   printf "------------------------------------------------\n"
+			   set $ast_cnt=0
+ 			   set $total_ast_cnt=g_pdev_p->cfg_tgt.num_ast_entries + g_pdev_p->cfg_tgt.ast_skid_limit
+			   while ($ast_cnt < $total_ast_cnt)
+			     set $mac_0_31=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mac_addr_31_0
+			     set $mac_47_32=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mac_addr_47_32
+			     if $mac_0_31==$peer_mac_31to0 && $mac_47_32==$peer_mac_47to32
+				printf "------------------------------\n"
+			 	printf "AST Slot : %d ", $ast_cnt
+				if ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mcast
+		 			printf "(mcast key)"
+				else
+		 			printf "(unicast key)"
+				end
+	        		set $mac5= $mac_0_31 & 0xff
+  	        		set $mac4= $mac_0_31 >>8 & 0xff
+	        		set $mac3= $mac_0_31 >>16 & 0xff
+	        		set $mac2= $mac_0_31>>24 & 0xff
+	        		set $mac1= $mac_47_32 & 0xff
+				set $mac0= $mac_47_32>>8 & 0xff
+	        		printf "\nMAC      : %02x:%02x:%02x:%02x:%02x:%02x\n", $mac5, $mac4, $mac3, $mac2, $mac1, $mac0
+				printf "Key ID   : %d\n", ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.key_id
+				printf "------------------------------\n"
+				print/x *((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt)
+#				set $cpu_to_local=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.peer_entry_ptr & ~0x10000000
+#				print *(struct wal_sw_peer_key *)$cpu_to_local
+			     end
+			    set $ast_cnt += 1
+			   # while 
+ 			   end
+			 # $decode_ast_enrties
+			 end
+		      end
+		     # if peer's vdev matches vdev
+		     end
+		    set $i += 1	
+		 end
+	      # is vdev free ?
+             end
+             
+  	     set $vdev_index += 1
+	 # main while
+	end
+
+	printf "--------------------------------------------\n"
+	printf "--	      Quick Summary               --\n"
+	printf "--------------------------------------------\n"
+	set $total_vap = $total_ap_vap + $total_mon_vap + $total_ibss_vap + $total_sta_vap
+	printf "Total VAP: %d (AP:%d + mon:%d + ibss:%d + sta:%d)\n", $total_vap, $total_ap_vap, $total_mon_vap, $total_ibss_vap, $total_sta_vap
+	printf "--------------------------------------------\n"
+	printf "\nDecoding DONE !!\n"	
+end
+
+define all_peer
+	set $i=0
+	set $total_peer = g_pdev_p->cfg_tgt.num_active_peers
+	while ($i < $total_peer)
+		printf "-- Peer : %d -- \n",$i
+		printf "\t == WLAN_PEER == \n"
+ 	 	p/x g_pdev_p->peer_tbl[$i]
+		if g_pdev_p->peer_tbl[$i].wal_peer
+			printf "\t == WAL_PEER == \n"
+			p/x *(wal_peer_t *)g_pdev_p->peer_tbl[$i].wal_peer
+		end
+
+		set $i+=1
+	end
+end
+
+define my_bt
+        set print symbol-filename on
+        set $i = 0
+        set $dump_addr = (int)current_dump
+        set $a0 = *($dump_addr-16)&0x3fffffff
+        set $a1 = *($dump_addr-12)
+
+		#printf "-- a0 : %x -- \n",$a0
+		#printf "-- a1 : %x -- \n",$a1
+
+        #up 16 bytes
+        set $p_a0=*($a1-16) & 0x3fffffff
+        set $p_a1=*($a1-12)
+		#printf "-- p_a0 : %x -- \n",$p_a0
+		#printf "-- p_a1 : %x -- \n",$p_a1
+        while ($i < 40 && $a1 < &__stack)
+                p/a $a0
+                set $a0 = $p_a0
+                set $a1 = $p_a1
+		#printf "-- p_a0 : %x -- \n",$p_a0
+		#printf "-- p_a1 : %x -- \n",$p_a1
+                set $p_a0=*($a1-16) & 0x3fffffff
+                set $p_a1=*($a1-12)
+                set $i = $i + 1
+        end
+
+        #info the stack info
+       #x/32x &kernelstack
+       #p/x current_dump
+       #p/x *current_dump
+end
+
+define hostq
+ printf " -- Host Q --- \n" 
+ p/x *(hostq_ctxt*)g_hostq_ctxt
+
+ set $peer_id=0
+ set $num_peer=((hostq_ctxt*)g_hostq_ctxt).numPeer 
+ set $flag = ((hostq_ctxt*)g_hostq_ctxt).flags
+
+ printf "-------------------------------------------------------------------------\n"
+ printf "Peer No | TID 0 | TID 1 | TID 2 | TID 3 | TID 4 | TID 5 | TID 6 | TID 7 |\n"
+ printf "        |(bytes)|(bytes)|(bytes)|(bytes)|(bytes)|(bytes)|(bytes)|(bytes)|\n"
+ printf "-------------------------------------------------------------------------\n"
+ while $peer_id < $num_peer
+     set $tid=0
+     printf "%7d |", $peer_id
+     while $tid < 8
+       set $val = ((hostq_ctxt*)g_hostq_ctxt).hq_buff[$tid][$peer_id] 
+       
+       if (($flag>>12) & 0x1)
+         set $bytes = $val & 0x3f
+         set $shift = ((($val & 0xc0) >> 6) * 3) + 7
+         set $total_bytes = $bytes << $shift
+       else
+	 set $total_bytes = $val 
+       end
+       
+       printf "%6d |", $total_bytes
+       set $tid += 1
+     end 
+     printf "\n"
+  set $peer_id += 1
+ end 
+ printf "-------------------------------------------------------------------------\n\n"
+
+ printf "                   ==    Peer Active Map   ==                            \n"
+ printf "-------------------------------------------------------------------------\n"
+ printf "Peer No | TID 0 | TID 1 | TID 2 | TID 3 | TID 4 | TID 5 | TID 6 | TID 7 |\n"
+ printf "-------------------------------------------------------------------------\n"
+
+ set $peer_id=0
+ while $peer_id <= $num_peer
+
+  set $byte = $peer_id / 32
+   set $bit = $peer_id % 32
+   printf "%7d |", $peer_id
+
+   set $tid=0
+   while $tid < 8 
+     set $val = (((hostq_ctxt*)g_hostq_ctxt).hq_active_peermap[$tid][$byte])
+
+     if $val & (1<<$bit)
+	printf "   A   |"
+     else
+	printf "   -   |"
+     end
+     set $tid += 1
+   end 
+   printf "\n"
+
+  set $peer_id += 1
+ end
+
+ printf "-------------------------------------------------------------------------\n"
+
+end
+
+
+define decode_pf_sch_ctxt
+  set $ctxt=$arg0
+  set $sch_cmd=$arg0.sched_cmdq.tqh_first
+  set $flags=$arg0.flags
+
+  # dump flags
+  printf "---------------------\n"
+  printf "Flag : "
+  if $flags & 0x1
+   printf "PREFETCH_EN,"
+  end
+  if $flags & 0x2
+   printf "SUSPEND_EN,"
+  end
+  if $flags & 0x4
+   printf "IGNORE_MU,"
+  end
+  if $flags & 0x8
+   printf "ATF_BYPASS"
+  end
+  printf "\n---------------------\n"
+
+  p/x $ctxt
+
+  # dump schedule cmd q
+  set $index=0
+  while $sch_cmd != 0
+    printf "\n == scheduled cmd : %d (0x%x) ==\n", $index, $sch_cmd
+    printf "------------------------------\n"
+    printf "Flags = " 
+    set $flags=$sch_cmd.flags
+    if $flags & 0x1
+	printf "SU, "
+    end
+    if $flags & 0x2
+	printf "MU, "
+    end
+    if $flags & 0x4
+	printf "WAIT_FETCH_RESP, "
+    end
+    if $flags & 0x8
+	printf "IN_SCHED, "
+    end
+    if $flags & 0x10
+	printf "SENDN, "
+    end
+    if $flags & 0x20
+	printf "BYPASS_FETCH_MGR, "
+    end
+    if $flags & 0x40
+	printf "ATF, "
+    end
+    if $flags & 0x80
+	printf "SENDN_POOL, "
+    end
+    if $flags & 0x100
+	printf "DISREGARD_TOKEN, "
+    end
+    if $flags & 0x200
+	printf "SHORT_PKT, "
+    end
+    if $flags & 0x400
+	printf "PING_PONG, "
+    end
+    printf "\n------------------------------\n"
+
+    p/x *(struct wal_tx_pfsched_cmd *)$sch_cmd
+    set $sch_cmd=((struct wal_tx_pfsched_cmd *)$sch_cmd).sched_entry.tqe_next
+    set $index+=1
+ end
+end
+
+define pf_sch
+ printf " -- Prefetch Scheduler --- \n" 
+ printf "---------------------\n"
+ printf "Flag : "
+ if g_pfsched_info.flags & 0x1
+  printf "ATF enabled, "
+ end
+ if g_pfsched_info.flags & 0x2
+  printf "qdepth algo configured"
+ else
+  printf "round robin algo configured"
+ end
+ printf "\n---------------------\n"
+
+ p/x *g_pfsched_info
+
+ printf "== Decoding scheduling context from above struct ==\n" 
+
+ printf "--------- BK --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[0]
+
+ printf "--------- BE --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[1]
+
+ printf "--------- VI --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[2]
+
+ printf "--------- VO --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[3]
+
+ printf "--------- MGMT --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[4]
+
+ printf "--------- PSPOLL --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[5]
+ 
+ printf "----------SIFS-RESP------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[6]
+
+ printf "--------- BEACON --------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[7]
+
+ printf "---------- CAB ----------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[8]
+
+ printf "--------- HAL -----------\n"
+ decode_pf_sch_ctxt g_pfsched_info.ctxt[9]
+
+end
+
+define dump_stack
+
+        set print symbol-filename on
+	printf "------------------------------\n"
+	printf " Priority 2 Stack (size : 1KB)\n"
+	printf "------------------------------\n"
+	x/256x &_Pri_2_Stack
+
+	set $index=0
+        while $index < 256
+           set $addr = &_Pri_2_Stack + $index 
+           if (*$addr & 0x80000000)
+	     set $addr = *$addr & 0x3fffffff
+	     p/a $addr
+	   end
+           set $index += 1
+        end
+
+	printf "------------------------------\n"
+	printf " Priority 3 Stack (size : 1KB)\n"
+	printf "------------------------------\n"
+	x/256x &_Pri_3_Stack
+
+	set $index=0
+        while $index < 256
+           set $addr = &_Pri_3_Stack + $index 
+           if (*$addr & 0x80000000)
+	     set $addr = *$addr & 0x3fffffff
+	     p/a $addr
+	   end	
+           set $index += 1
+        end
+
+	printf "------------------------------\n"
+	printf " Priority 4 Stack (size : 1KB)\n"
+	printf "------------------------------\n"
+	x/256x &_Pri_4_Stack
+    
+ 	set $index=0
+        while $index < 256
+           set $addr = &_Pri_4_Stack + $index 
+           if (*$addr & 0x80000000)
+	     set $addr = *$addr & 0x3fffffff
+	     p/a $addr
+	   end	
+           set $index += 1
+        end
+	printf "------------------------------\n"
+	printf " Priority 4 Stack (size : 1KB)\n"
+        printf "   --- Additional 1 KB ---- \n" 
+	printf "------------------------------\n"
+	set $p4_addr = &_Pri_4_Stack
+	set $p4_addr = $p4_addr + 256
+	x/256x $p4_addr
+        set $addr1=&_Pri_4_Stack+256
+	set $index=0
+        while $index < 256
+            set $addr = $addr1 + $index 
+	    p/a *$addr
+           set $index += 1
+        end
+
+	printf "-------------------------\n"
+	printf " Priority Kernel Stack\n"
+	printf "  start addr : 0x%x\n", &__stack
+	printf "    end addr : 0x%x\n", &kernelstack
+	set $stack_size=(int)&__stack-(int)&kernelstack
+	printf "  total size : %d bytes\n", $stack_size
+	printf "-------------------------\n"
+	x/1024x &kernelstack
+
+	set $index=0
+        while $index < 1024
+           set $addr = &kernelstack + $index 
+           if (*$addr & 0x80000000)
+   	     set $addr = *$addr & 0x3fffffff
+	     p/a $addr
+           end
+           set $index += 1
+        end
+end
+
+define ocs
+     printf "-------------\n"
+     printf "--   OCS   --\n"
+     printf "-------------\n"
+     p/x *g_p_resmgr_ocs_ctx
+
+     set $ch_alloc=g_p_resmgr_ocs_ctx->ch_allocator_list.tqh_first
+     set $i=0
+     while ($ch_alloc != 0)
+	printf "------------------------------\n"
+	printf "   Channel Allocator : %d    \n\n", $i
+
+	if $ch_alloc == g_p_resmgr_ocs_ctx->current_ch_allocator
+	printf " * Current CH allocator\n"
+	end
+	if $ch_alloc == g_p_resmgr_ocs_ctx->previous_ch_allocator
+	printf " * Previous CH allocator\n"
+	end
+
+	if $ch_alloc == g_p_resmgr_ocs_ctx->winning_ch_allocator
+	printf " * Winning CH allocator\n"
+	end
+	printf "------------------------------\n"
+
+	p/x *(resmgr_ocs_ch_allocator_t *)$ch_alloc
+
+	set $time_slot=((resmgr_ocs_ch_allocator_t *)$ch_alloc)->cat_timeslot.req_timeslot_head.tqh_first
+	set $index = 0
+	while ($time_slot != 0)
+		printf "------------------\n"
+		printf "- Time Slot : %2d -\n", $index
+		printf "------------------\n"
+		p/x *(resmgr_ocs_request_timeslot_t *)$time_slot
+
+		printf "Channel Req (state: "
+		set $state=((resmgr_ocs_request_timeslot_t *)$time_slot).ch_req.state
+
+		if $state == 0
+			printf "NONE,"
+		end
+		if $state == 1
+			printf "INIT"
+		end
+		if $state == 2
+			printf "READY"
+		end
+		if $state == 3
+			printf "RUNNING"
+		end
+		if $state == 4
+			printf "GRANTED"
+		end
+		if $state == 5
+			printf "STOPPED"
+		end
+		if $state == 6
+			printf "COMPLETED"
+		end
+		printf ", duration: %d usec ", ((resmgr_ocs_request_timeslot_t *)$time_slot).ch_req.duration_usec
+	
+		set $vdev_index=0
+		while ($vdev_index < g_pdev_p->cfg_tgt.num_vdevs)
+			 if (g_pdev_p->vdev_array[$vdev_index] == ((resmgr_ocs_request_timeslot_t *)$time_slot).ch_req.cmplt_handler_arg)
+				 printf ", vdev_id: %d)\n", $vdev_index
+			 end
+		set $vdev_index+=1
+		end
+
+		printf "---------------------------------------------------------------\n"
+		p/x *((resmgr_ocs_request_timeslot_t *)$time_slot).ch_req
+
+		set $time_slot=((resmgr_ocs_request_timeslot_t *)$time_slot)->req_timeslot_te.tqe_next
+		set $index += 1
+	end
+	set $ch_alloc=((resmgr_ocs_ch_allocator_t *)$ch_alloc).ch_alloc_te.tqe_next
+	set $i+=1
+   end
+end
+
+define ast_entries
+ set $ast_cnt=0
+ set $valid_ast_enties=0
+ set $total_ast_cnt=g_pdev_p->cfg_tgt.num_ast_entries + g_pdev_p->cfg_tgt.ast_skid_limit
+ while ($ast_cnt < $total_ast_cnt)
+	set $mac_0_31=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mac_addr_31_0
+	set $mac_47_32=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mac_addr_47_32
+	set $valid = ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.valid
+	if $mac_0_31!=0 && $mac_47_32!=0 && $valid
+		printf "----------------------\n"
+		printf "AST Slot : %d ", $ast_cnt
+		if ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mcast
+		 printf "(mcast key)"
+		else
+		 printf "(unicast key)"
+		end
+	        set $mac5= $mac_0_31 & 0xff
+  	        set $mac4= $mac_0_31 >>8 & 0xff
+	        set $mac3= $mac_0_31 >>16 & 0xff
+	        set $mac2= $mac_0_31>>24 & 0xff
+	        set $mac1= $mac_47_32 & 0xff
+		set $mac0= $mac_47_32>>8 & 0xff
+
+		set $dmaaddr=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.peer_entry_ptr
+		if ($dmaaddr) 
+   			if ($dmaaddr & ~dma_local_bits) < 0x00100000
+				set $dmaaddr &= 0x000fffff
+			else
+			   if ($dmaaddr & 0x00080000)
+				set $dmaaddr = ($dmaaddr & 0x000fffff) | 0x00900000
+			   else	
+				set $dmaaddr = ($dmaaddr & 0x000fffff) |  0x00400000
+			   end
+			end
+		end
+
+	        printf "\nMAC      : %02x:%02x:%02x:%02x:%02x:%02x\n", $mac5, $mac4, $mac3, $mac2, $mac1, $mac0
+		printf "----------------------\n"
+		print *((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt)
+#		print *(struct wal_sw_peer_key *)$dmaaddr
+
+		set $valid_ast_enties += 1
+	end
+	set $ast_cnt += 1
+ end
+ printf "Total %d entries valid out of %d entries in ast table\n", $valid_ast_enties, $total_ast_cnt
+end
+
+# Rate Table
+define rate_table
+set $total_entries=sizeof(whal_11abgnRateTable.info)/sizeof(whal_11abgnRateTable.info[0])
+set $index=0
+set $phy=0xFF
+set $prop_mask=1
+
+while ($index < $total_entries)
+  
+    if (($phy != whal_11abgnRateTable.info[$index].phy) || ($prop_mask != whal_11abgnRateTable.info[$index].propMask))
+
+        if  $phy != 0xFF
+         printf "-------------------------------------------------------------------------------------------------------------------------------------------- \n"
+        end 
+
+	if whal_11abgnRateTable.info[$index].phy == 0
+	 printf "CCK :\n"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 1
+	 printf "\n\nOFDM :\n"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 2
+	 printf "\n\nHT 20"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 3
+	 printf "\n\nHT 40"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 4
+	 printf "\n\nVHT 20"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 5
+	 printf "\n\nVHT 40"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 6
+	 printf "\n\nVHT 80"
+	else
+	if whal_11abgnRateTable.info[$index].phy == 7
+	 printf "\n\nVHT 160"
+	else
+	end
+	end
+	end
+	end
+	end
+	end
+	end
+	end
+
+        if (whal_11abgnRateTable.info[$index].propMask & 0xF) == 1
+         printf ", 1 NSS :\n" 
+        else
+        if (whal_11abgnRateTable.info[$index].propMask & 0xF) == 2
+         printf ", 2 NSS :\n" 
+        else
+        if (whal_11abgnRateTable.info[$index].propMask & 0xF) == 4
+         printf ", 3 NSS :\n" 
+        else
+        if (whal_11abgnRateTable.info[$index].propMask & 0xF) == 8 
+         printf ", 4 NSS :\n" 
+        else
+        end
+        end
+        end
+        end
+      set $prop_mask = whal_11abgnRateTable.info[$index].propMask
+      set $phy = whal_11abgnRateTable.info[$index].phy 
+      printf "--------------------------------------------------------------------------------------------------------------------------------------------\n"
+      printf "Id  |ModeMask|Phy    |PMask  |RKpbs    |RKpbsSGI |UsrRKpbs |RateCode|ShPrem|11rate|CtrlR |Ackmini|DeltMin|4mselen   |bPSym |MaxPER  |NLowIdx| \n" 
+      printf "-------------------------------------------------------------------------------------------------------------------------------------------- \n"
+   end
+
+   printf "%-3d |", $index
+   printf "0x%-4x  |"  ,whal_11abgnRateTable.info[$index].validModeMask
+   printf "0x%-3x  |"  ,whal_11abgnRateTable.info[$index].phy
+   printf "0x%-3x  |"  ,whal_11abgnRateTable.info[$index].propMask
+   printf "%-7d  |"  ,whal_11abgnRateTable.info[$index].rateKbps
+   printf "%-7d  |"  ,whal_11abgnRateTable.info[$index].rateKbpsSGI
+   printf "%-7d  |"  ,whal_11abgnRateTable.info[$index].userRateKbps
+   printf "0x%-4x  |"  ,whal_11abgnRateTable.info[$index].rateCode
+   printf "0x%-2x  |"  ,whal_11abgnRateTable.info[$index].shortPreamble
+   printf "0x%-2x  |"  ,whal_11abgnRateTable.info[$index].dot11Rate
+   printf "0x%-2x  |"  ,whal_11abgnRateTable.info[$index].controlRate
+   printf "0x%-3x  |"  ,whal_11abgnRateTable.info[$index].rssiAckValidMin
+   printf "0x%-3x  |"  ,whal_11abgnRateTable.info[$index].rssiAckDeltaMin
+   printf "0x%-6x  |"  ,whal_11abgnRateTable.info[$index].max4msecLen
+   printf "%-4d  |"  ,whal_11abgnRateTable.info[$index].bitsPerSymbol
+   printf "%-6d  |"  ,whal_11abgnRateTable.info[$index].maxPER
+   printf "%-5d  |"  ,whal_11abgnRateTable.info[$index].nextLowerIndex
+   printf "\n"
+ 
+   set $index += 1
+end
+printf "--------------------------------------------------------------------------------------------------------------------------------------------\n"
+printf "Total entries : %d\n", sizeof(whal_11abgnRateTable.info)/sizeof(whal_11abgnRateTable.info[0])
+end
+
+# MU Group Dump
+define mu_group_dump
+set $total_group=sizeof(g_wal_mu_dbg_grp)/sizeof(g_wal_mu_dbg_grp[0])
+set $total_users_in_group=sizeof(g_wal_mu_dbg_grp[0])/sizeof(g_wal_mu_dbg_grp[0][1])
+set $group_id=0
+printf "-------------------------------------\n"
+printf "|Group ID | User0 User1 User2 User3  |\n"
+printf "-------------------------------------\n"
+while $group_id < $total_group
+ set $user_pos=0
+ printf "|%9d | ", $group_id
+ while $user_pos < $total_users_in_group
+  printf "%2d    ", g_wal_mu_dbg_grp[$group_id][$user_pos]
+  set $user_pos +=1
+ end 
+ printf "|\n"
+ set $group_id += 1
+end
+printf "-------------------------------------\n"
+end
+
+define dbg_buf
+ set $ms_0 = 0
+ set $ms_1 = 0
+ set $ms_2 = 0
+ set $ms_3 = 0
+ set $ms_4 = 0
+ set $ms_5 = 0
+ set $ms_6 = 0
+ set $ms_7 = 0
+ set $ms_8 = 0
+ set $ms_9 = 0
+ set $ms_10 = 0
+ set $ms_11 = 0
+ set $ms_12 = 0
+ set $ms_13 = 0
+ set $ms_14 = 0
+ set $ms_15 = 0
+ set $ms_16 = 0
+ set $ms_17 = 0
+ set $ms_18 = 0
+ set $ms_19 = 0
+ set $ms_20 = 0
+ set $ms_x = 0
+
+ printf "buf wr index : %d\n", g_wal_pdev->dbg_buf_idx * 4
+
+ set $i=0
+ set $ts_pre=0
+ set $msec_cons=0
+ set $sch_tid_ts_pre=0
+ set $sch_tid_count=0
+ while $i < 16000
+# while $i < 26000
+   set $ts = *((unsigned long *)(g_wal_pdev->dbg_buf+$i))
+   printf "[%04d] ts = 0x%08x", $i, $ts
+
+   if $i != 0
+     set $diff = ($ts - $ts_pre) / 1000
+     printf "(%05d msec)", $diff
+   end
+   set $ts_pre = $ts
+   set $i += 4
+
+   set $data = *((unsigned long *)(g_wal_pdev->dbg_buf+$i))
+   printf " ch = %04d, ",  $data >> 16
+   printf "vdev_id = %02d, ",  $data & 0xFF
+   set $i += 4
+
+   set $data = *((unsigned long *)(g_wal_pdev->dbg_buf+$i))
+   printf "arg1 = 0x%08x",  $data
+
+   if $data==0xaa11
+        printf "(wal_vdev_pause_enable), "
+   end
+   if $data==0xaa12
+        printf "(wal_vdev_pause_disable), "
+   end
+   if $data==0xaa15
+        printf "(channel_mgr_pause_link), "
+   end
+   if $data==0xaa16
+        printf "(channel_mgr_unpause_links), "
+   end
+   if $data==0xaa13
+        printf "(wlan_virtual_chan_add_link), "
+   end
+
+   if $data==0xaa14
+        printf "(wlan_virtual_chan_remove_link), "
+   end
+   if $data==0xaa1e
+        printf "(WMI_VDEV_START_RESP_EVENTID,wlan_vdev_channel_op_cb), "
+   end
+   if $data==0xaa17
+        printf "(wlan_vdev_start), "
+   end
+   if $data==0xaa19
+        printf "(wlan_vdev_stop), "
+   end
+   if $data==0xaa1a
+        printf "(wlan_vdev_up), "
+   end
+   if $data==0xaa1b
+        printf "(wlan_vdev_down), "
+   end
+   if $data==0xaa18
+        printf "(wlan_vdev_restart), "
+   end
+
+   if $data==0xaa1c
+        printf "(wlan_vdev_pause), "
+   end
+
+   if $data==0xaa1d
+        printf "(wlan_vdev_unpause), "
+   end
+
+   if $data==0xaa1f
+        printf "(wlan_unified_vdev_stop), "
+   end
+
+   if $data==0xaa20
+        printf "(wlan_unified_vdev_down), "
+   end
+
+   if $data==0xbbaa
+        printf "(dispatch tid), "
+	set $sch_tid_count+=1
+   end
+
+   if $data==0xbbab
+        printf "(tx comp), "
+   end
+
+   if ($data & 0xFFFF) ==0xbbac
+        printf "(fetch rtt), "
+   end
+
+   if $data ==0xbbad
+        printf "(enqueue), "
+   end
+
+   if $data ==0xbbae
+        printf "(msdu), "
+   end
+
+   if $data ==0xbbaf
+        printf "(mpdu), "
+   end
+
+   if $data ==0xbb01
+        printf "(sch_cmd_create), "
+   end
+
+   if $data ==0xbb02
+        printf "(sch skip), "
+   end
+
+   set $i += 4
+
+   set $arg_2=*((unsigned long *)(g_wal_pdev->dbg_buf+$i))
+   printf " arg2 = 0x%08x", $arg_2
+   
+   if $data == 0xbb01
+	printf "(sch_id : %d, flags: 0x%x)", $arg_2&0xFFFF, ($arg_2>>16)&0xFFFF
+   end	
+
+   if $data== 0xbbad 
+       printf "(avg_len: %d, pkt_len : %d, extend_mpdu: %d)", $arg_2>>16, (($arg_2>>4) & 0xFFF), $arg_2&0x1 
+   end
+
+   if $data==0xbbaa || $data==0xbbab || ($data & 0xFFFF) ==0xbbac
+	printf "(mac: %x, sch_id: %d, tid:%d", $arg_2&0xFF, ($arg_2>>8)&0xFFFF, ($arg_2>>24)&0xFF
+
+	if  ($data==0xbbaa) && ($ts>=$sch_tid_ts_pre) && ($sch_tid_ts_pre != 0)
+		set $sch_delta = ($ts - $sch_tid_ts_pre) / 1000
+		printf " delta: %d msec", $sch_delta
+		
+		# ugly track, but no choice until i figure out how to deal array in gdb scripts
+		if $sch_delta == 0
+		   set $msec_cons += $ts - $sch_tid_ts_pre
+ 		   set $ms_0+=1
+		end
+		if $sch_delta == 1
+ 		   set $ms_1+=1
+		end
+		if $sch_delta == 2
+ 		   set $ms_2+=1
+		end
+		if $sch_delta == 3
+ 		   set $ms_3+=1
+		end
+		if $sch_delta == 4
+ 		   set $ms_4+=1
+		end
+		if $sch_delta == 5
+ 		   set $ms_5+=1
+		end
+		if $sch_delta == 6
+ 		   set $ms_6+=1
+		end
+		if $sch_delta == 7
+ 		   set $ms_7+=1
+		end
+		if $sch_delta == 8
+ 		   set $ms_8+=1
+		end
+		if $sch_delta == 9
+ 		   set $ms_9+=1
+		end
+		if $sch_delta == 10
+ 		   set $ms_10+=1
+		end
+		if $sch_delta == 11
+ 		   set $ms_11+=1
+		end
+		if $sch_delta == 12
+ 		   set $ms_12+=1
+		end
+		if $sch_delta == 13
+ 		   set $ms_13+=1
+		end
+		if $sch_delta == 14
+ 		   set $ms_14+=1
+		end
+		if $sch_delta == 15
+ 		   set $ms_15+=1
+		end
+		if $sch_delta == 16
+ 		   set $ms_16+=1
+		end
+		if $sch_delta == 17
+ 		   set $ms_17+=1
+		end
+		if $sch_delta == 18
+ 		   set $ms_18+=1
+		end
+		if $sch_delta == 19
+ 		   set $ms_19+=1
+		end
+		if $sch_delta == 20
+ 		   set $ms_20+=1
+		end
+		if $sch_delta > 20
+ 		   set $ms_x+=1
+		end
+	end
+ 	if $data==0xbbaa
+	  set $sch_tid_ts_pre = $ts
+        end
+
+	if ($data & 0xFFFF) ==0xbbac
+		printf ", fetch rtt: %d\n", ($data >> 16)&0xFFFF
+	else
+		printf ")\n"	
+	end
+   else
+	printf "\n" 
+   end
+   set $i += 4
+ end
+
+  set $total_hits =  $ms_0+$ms_1+$ms_2+$ms_3+$ms_4+$ms_5+$ms_6+$ms_7+$ms_8
+  set $total_hits += $ms_9+$ms_10+$ms_11+$ms_12+$ms_13+$ms_14+$ms_15+$ms_16
+  set $total_hits += $ms_17+$ms_18+$ms_19+$ms_20+$ms_x
+
+  printf "schedule histogram:\n"
+  printf " ---------------\n"
+  printf "| msec : hits  |\n"
+  printf " ---------------\n"
+  printf "     0 : %d \n", $ms_0
+  printf "     1 : %d \n", $ms_1
+  printf "     2 : %d \n", $ms_2
+  printf "     3 : %d \n", $ms_3
+  printf "     4 : %d \n", $ms_4
+  printf "     5 : %d \n", $ms_5
+  printf "     6 : %d \n", $ms_6
+  printf "     7 : %d \n", $ms_7
+  printf "     8 : %d \n", $ms_8
+  printf "     9 : %d \n", $ms_9
+  printf "    10 : %d \n", $ms_10
+  printf "    11 : %d \n", $ms_11
+  printf "    12 : %d \n", $ms_12
+  printf "    13 : %d \n", $ms_13
+  printf "    14 : %d \n", $ms_14
+  printf "    15 : %d \n", $ms_15
+  printf "    16 : %d \n", $ms_16
+  printf "    17 : %d \n", $ms_17
+  printf "    18 : %d \n", $ms_18
+  printf "    19 : %d \n", $ms_19
+  printf "    20 : %d \n", $ms_20
+  printf "   >20: %d \n", $ms_x
+  printf "-------------------\n"
+  
+  printf "total hits : %d\n", $total_hits
+
+  set $total_msec = $msec_cons / 1000
+  set $total_msec += $ms_1 + ($ms_2 * 2) + ($ms_3 * 3) + ($ms_4 * 4) + ($ms_5 * 5)
+  set $total_msec += ($ms_6 * 6) + ($ms_7 * 7) + ($ms_8 * 8) + ($ms_9 * 9) + ($ms_10 * 10) + ($ms_11 * 11) 
+  set $total_msec += ($ms_12 * 12) + ($ms_13 * 13) + ($ms_14 * 14) + ($ms_15 * 15) + ($ms_16 * 16)
+  set $total_msec += ($ms_17 * 17) + ($ms_18 * 18) + ($ms_19 * 19) + ($ms_20 * 20) + ($ms_x * 21)
+
+  printf "total time consumed : %d msec\n", $total_msec
+  printf "total sched tid hits : %d\n", $sch_tid_count
+#  printf "\n\nRAW DUMP\n"
+#  x/4000  g_wal_pdev->dbg_buf
+end
+
+define dbg_buf_raw
+  printf "buf wr index : %d\n", g_wal_pdev->dbg_buf_idx * 4
+  x/4000  g_wal_pdev->dbg_buf
+end
+
+# ISR Debug
+define isr_debug
+p/x *(struct wal_tx_seq_ctrl *)g_isr_txq.seq_ctrl_list.stqh_first
+end
+
+# Dump timer tables
+define timer_tbl
+ set $total_entries=sizeof(timer_type_info)/sizeof(timer_type_info[0])
+ set $index=0
+
+ while ($index < $total_entries)
+	printf " Timer table index : %d\n", $index
+    printf " **********************\n"
+    p/x timer_type_info[$index]
+	
+   	set $timer_next=(cmnos_timer_t *)(timer_type_info[$index].timer_list)
+
+    while $timer_next != 0
+      printf "--------------------------------------\n"
+      p/x *(cmnos_timer_t *)$timer_next
+      p/a (cmnos_timer_t *)$timer_next.timer_function
+
+      set $flag=((cmnos_timer_t *)$timer_next).timer_flags
+
+      if $flag & 0x2
+        printf "NO_FORCE_DISARM\n"
+      end
+
+      if $flag & 0x4
+        printf "IGNORE_REARM \n"
+      end
+
+      if $flag & 0x8
+        printf "ALLOW_REARM\n"
+      end
+
+	  set $type = $flag>>24
+
+	  if $type == 0x1
+		printf "CUSTOM_TIMER (use tbl index: 1)\n"
+	  else
+		printf "LF_TIMER (use tbl index: 0)\n"
+	  end
+
+      set $timer_next=((cmnos_timer_t *)$timer_next).timer_next
+      printf "--------------------------------------\n\n"
+    end
+
+    set $index+=1 
+ end
+end
+
+
+# Cache manager
+define cache_mgr
+printf "-------------------------------------------------\n"
+printf "-- Rate Ctrl Context (g_pdev_p->ratectrl_ctxt) --\n"
+printf "-------------------------------------------------\n"
+p/x *(struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt
+
+printf "-------------\n"
+printf "- CM Handle -\n"
+printf "-------------\n"
+p/x *((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle
+
+set $local_obj_cnt=((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle->local_obj_cnt
+set $index=0
+printf "----------------------------\n"
+printf "-       Local OBJ          -\n"
+printf "----------------------------\n"
+while $index < $local_obj_cnt
+ printf "----------\n"
+ printf "Slot : %d \n", $index
+ printf  "----------\n"
+ p/x ((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle->local_obj_map[$index]
+
+ set $set=(((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle->local_obj_map[$index]).sm
+ if $set != 0
+   printf " State Machine\n"
+   printf " -------------\n"
+   p/x *(sm_info *)$set
+
+   set $cur_state=((sm_info *)$set).cur_state
+
+   printf " SM Current State : "
+   if $cur_state == 0
+	printf "FREE\n"
+   end
+   if $cur_state == 1
+	printf "FETCHING\n"
+   end
+   if $cur_state == 2
+	printf "FETCHED\n"
+   end
+   if $cur_state == 3
+	printf "WRITING_BACK\n"
+   end
+   if $cur_state == 4
+	printf "WRITTEN_BACK\n"
+   end
+ end
+
+ set $index +=1
+end
+
+printf "-----------------------------\n"
+printf "-       Remote OBJ          -\n"
+
+set $remote_obj_cnt=((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle->remote_obj_cnt
+set $index=0
+printf "-----------------------------\n"
+printf "Index |Remote Memory | Flags\n"
+printf "-----------------------------\n"
+while $index < $remote_obj_cnt
+  set $flags=((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle->remote_obj_map[$index].flags
+
+  printf "%5d |", $index
+  printf "0x%x |", ((struct ratectrl_ctxt *)g_pdev_p->ratectrl_ctxt)->cm_handle->remote_obj_map[$index].remote_mem
+  printf "0x%x ", $flags
+  if $flags & 1
+   printf "(Free)"
+  end
+  if $flags & 2
+   printf "(Allocated)"
+  end
+  if $flags & 4
+   printf "(Uninit)"
+  end
+  if $flags & 8
+   printf "(Init)"
+  end
+ 
+  printf "\n"
+  set $index +=1
+end
+
+end
+
+define dump_su_no_pdg_fes_complete_tlv
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).fes_complete_tlv
+end
+
+define dump_su_no_pdg_su_ext
+# arg0 is the start address of the Transmit TLVs pointed by scheduler command
+print ((struct hwsched_su_sw_pdg_desc *)$arg0).su_ext
+end
+
+define runtowaltest_asic
+reset
+reset
+#reset
+delete
+nobmi
+nowdt
+nosleep
+roms
+hb athos_run_app
+cont
+restore /lib/firmware/fakeBoardData_AR6004.bin binary 0x401cb0
+set ((struct host_interest_s *)0x400800)->hi_board_data_initialized=0x1
+loadwaltest
+symwaltest
+set host_specified_app_start=0x983c00
+set ((struct host_interest_s *)0x400800)->hi_allocram_start=0x0
+#set ((struct host_interest_s *)0x400800)->hi_allocram_sz=0x10000
+hb waltest_main
+echo done\n
+#c
+#delete
+#hb waltest_app_start
+#c
+end
+
+define runtowlan
+reset
+reset
+delete
+nobmi
+nowdt
+nosleep
+roms
+loadathwlan
+rams
+hb athos_run_app
+set host_specified_app_start=&app_start
+cont
+hb app_start
+#delete
+#c
+end
+
+define findassert
+br *$epc1
+set hang_memctlr_isr_error = 0
+cont
+bt
+end
+
+define tx_stats
+p g_waltest_ctxt
+end
+
+define rx_stats
+p g_waltest_rx_ctxt
+end
+
+#  Emulation(MDK) steps for pkt TX
+define mac_setup_tx
+    # MAC_PCU_STA_ADDR_L32
+    set *(unsigned*)0x28000 = 0xa0a0a0a0
+    set *(unsigned*)0x28004 = 0x0001a0a0
+    # MAC_PCU_STA_ADDR_L32
+    set *(unsigned*)0x28008 = 0xb0b0b0b0
+    set *(unsigned*)0x2800C = 0x0001b0b0
+    #RX_FILTER
+    set *(unsigned*)0x2803C = 0x00000000
+    # DIAG_SW
+    set *(unsigned*)0x28048 = 0x00000000
+    #turn on MAC IER
+    set *(unsigned*)0x20024 = 0x00000001
+end
+
+define mac_setup_rx
+    # MAC_PCU_STA_ADDR_L32
+    set *(unsigned*)0x28000 = 0xc0c0c0c0
+    set *(unsigned*)0x28004 = 0x0001c0c0
+    # MAC_PCU_STA_ADDR_L32
+    set *(unsigned*)0x28008 = 0xb0b0b0b0
+    set *(unsigned*)0x2800C = 0x0001b0b0
+    #RX_FILTER
+    set *(unsigned*)0x2803C = 0x00000004
+    # DIAG_SW
+    set *(unsigned*)0x28048 = 0x00000000
+    #turn on MAC IER
+    set *(unsigned*)0x20024 = 0x00000001
+end
+
+define run_tx_test
+    set g_waltest_id = 1
+    br waltest_tx_test_done
+    cont
+end
+
+define run_rx_test
+    set g_waltest_id = 2
+    cont
+end
+
+
+# List name/address for all Linux modules that are currently loaded.
+# In kgdb, you can use "add-symbol-file name address".
+# To sort numerically, use this on the output:
+#    sort -k 2 -g
+#
+define lsmod
+    set $modinfo=&modules
+    set $currmod=((struct list_head *)$modinfo)->next
+    while $currmod != $modinfo
+        set $currmod=(int)$currmod - 4
+        set $name=((struct module *)$currmod)->name
+        set $address= ((struct module *)$currmod)->module_core
+        printf "%s 0x%x\n", $name, $address
+        set $currmod=((struct module *)$currmod)->list.next
+    end
+end
+
+# Simple string comparison that doesn't require the gdb target
+# to support malloc.
+# Usage:
+#   stringcmp "string1" "string2"
+#   if $stringcmp_rv == 0
+#     /* match */
+#   else
+#     /* mismatch */
+#   end
+define stringcmp
+    set $stringcmp0=$arg0
+    set $stringcmp1=$arg1
+    set $stringcmp_sz0=sizeof($stringcmp0)-1
+    set $stringcmp_sz1=sizeof($stringcmp1)-1
+
+    set $stringcmp_idx=0
+    while ($stringcmp_sz0 > 0) && ($stringcmp_sz1 > 0) && ($stringcmp0[$stringcmp_idx] == $stringcmp1[$stringcmp_idx])
+        set $stringcmp_sz0=$stringcmp_sz0-1
+        set $stringcmp_sz1=$stringcmp_sz1-1
+        set $stringcmp_idx=$stringcmp_idx+1
+    end
+
+    if ($stringcmp_sz0 > 0) && ($stringcmp_sz1 > 0)
+        set $stringcmp_rv=1
+    else
+        set $stringcmp_rv=0
+    end
+end
+
+# Helper function for modsym macro, below.
+#
+# Given a Linux module section attribute structure in arg0,
+# if the section name is a special one (text, data, bss, rodata)
+# set a corresponding mod_attr_* address.
+define modattr_process
+    set $modsec_name=$arg0->mattr.attr.name
+    set $modsec_addr=$arg0->address
+
+    stringcmp $modsec_name ".text"
+    if $stringcmp_rv == 0
+        set $modattr_text=$modsec_addr
+    else
+
+    stringcmp $modsec_name ".data"
+    if $stringcmp_rv == 0
+        set $modattr_data=$modsec_addr
+    else
+
+    stringcmp $modsec_name ".bss"
+    if $stringcmp_rv == 0
+        set $modattr_bss=$modsec_addr
+    else
+
+    stringcmp $modsec_name ".rodata"
+    if $stringcmp_rv == 0
+        set $modattr_rodata=$modsec_addr
+    end
+    end
+    end
+    end
+end
+
+# Determine addresses for all interesting sections of a
+# Linux loadable module, specified as an argument.
+#
+# To do this, walk Linux' data structures for modules that
+# have been loaded in order to find the module of interest.
+# Then walk the section attributes for that module in order
+# to determine addresses for relevant sections.
+#
+# Sets $modsym_found to non-zero if the module is loaded.
+define modsym
+    set $module_name=$arg0
+    set $modattr_text=0
+    set $modattr_data=0
+    set $modattr_bss=0
+    set $modattr_rodata=0
+
+    set $modinfo=&modules
+    set $currmod=((struct list_head *)$modinfo)->next
+    set $modsym_found = 0
+    while ($modsym_found == 0) && ($currmod != $modinfo)
+        set $currmod=(struct module *)((long)$currmod - 4)
+        stringcmp $module_name $currmod->name
+	if $stringcmp_rv == 0
+            set $modsym_found=1
+	    set $attr=(struct module_sect_attrs *)($currmod->sect_attrs)
+            set $secnum=0
+            set $nsections=$attr->nsections
+            while $secnum < $nsections
+	        set $sattr=&((struct module_sect_attr *)$attr->attrs)[$secnum]
+                modattr_process $sattr
+                set $secnum=$secnum+1
+            end
+	end
+        set $currmod=((struct module *)$currmod)->list.next
+    end
+end
+
+# This is an example of how to use modsym to load symbols for the example1.ko module.
+# The vmlinux and example1.ko files must be available on the system where you run gdb
+# and you would typically start gdb with "gdb vmlinux".
+define example1
+    modsym "example1"
+    if $modsym_found == 0
+        p "Module not found"
+    else
+        add-symbol-file example1.ko $modattr_text -s .data $modattr_data -s .bss $modattr_bss -s .rodata $modattr_rodata
+    end
+end
+
+# Display copy engine registers
+# usage: ce_regs <CEid>
+define ce_regs
+    set $ce_addr = 0x4A000 + ($arg0 * 0x400)
+    printf "SR_RING_ADDR=0x%x  ", ((int *)$ce_addr)[0]
+    printf "SR_SIZE=0x%x  ", ((int *)$ce_addr)[1]
+    printf "DR_BA=0x%x  ", ((int *)$ce_addr)[2]
+    printf "DR_SIZE=0x%x\n", ((int *)$ce_addr)[3]
+    printf "CE_CTRL1=0x%x  ", ((int *)$ce_addr)[4]
+    printf "CE_CTRL2=0x%x  ", ((int *)$ce_addr)[5]
+    printf "CE_CMD=0x%x  ", ((int *)$ce_addr)[6]
+    printf "MSI_ADDR=0x%x\n", ((int *)$ce_addr)[7]
+    printf "MSI_DATA=0x%x  ", ((int *)$ce_addr)[8]
+    printf "TARGET_IE=0x%x  ", ((int *)$ce_addr)[9]
+    printf "TARGET_IS=0x%x  ", ((int *)$ce_addr)[10]
+    printf "HOST_IE=0x%x\n", ((int *)$ce_addr)[11]
+    printf "HOST_IS=0x%x  ", ((int *)$ce_addr)[12]
+    printf "MISC_IE=0x%x  ", ((int *)$ce_addr)[13]
+    printf "MISC_IS=0x%x  ", ((int *)$ce_addr)[14]
+    printf "SR_WR_INDEX=0x%x\n", ((int *)$ce_addr)[15]
+    printf "DST_WR_INDEX=0x%x  ", ((int *)$ce_addr)[16]
+    printf "CURRENT_SRRI=0x%x  ", ((int *)$ce_addr)[17]
+    printf "CURRENT_DRRI=0x%x\n", ((int *)$ce_addr)[18]
+    printf "SRC_WATERMARK=0x%x  ", ((int *)$ce_addr)[19]
+    printf "DST_WATERMARK=0x%x\n", ((int *)$ce_addr)[20]
+end
+
+
+define hwsch_state_dump
+set *((A_UINT32 *)0x3f738)=0x100
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x200
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x300
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x400
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x500
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x600
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x600
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x700
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x800
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x900
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0xa00
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0xb00
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0xc00
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f734)=0xd00
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0xe00
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0xf00
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1000
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1100
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1200
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1300
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1400
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1500
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1600
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1700
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1800
+x/8 0x3f734
+
+set *((A_UINT32 *)0x3f738)=0x1900
+x/8 0x3f734
+
+end
+
+
+
+
+
+
+define ce_all
+    ce_regs 0
+    ce_regs 1
+    ce_regs 2
+    ce_regs 3
+    ce_regs 4
+    ce_regs 5
+    ce_regs 6
+    ce_regs 7
+end
+
+define bcn
+p/x *(WLAN_BEACON_STRUCT *) ((wlan_vdev_t*)g_pdev_p->vdev_array[0]).pWlanBeaconStruct
+p/x *(WLAN_BEACON_COMMON_STRUCT *) (((WLAN_BEACON_STRUCT *) ((wlan_vdev_t*)g_pdev_p->vdev_array[0]).pWlanBeaconStruct).pWlanBcnCmnStruct)
+end
+
+define my_r
+roms
+rams
+set logging on raja.txt
+sch_cmd
+tx_tlv
+set logging off
+end
+
+
+define del
+ printf "DRAM\n"
+ x/32x 0x400000
+ printf "SRAM\n"
+ x/32x 0xC0000 
+ printf "IRAM\n"
+ x/32x 0x980000
+end
+
+define my
+ p/x *(RKS_OL_RC_UPDATE*)0x441138
+ p/x *(RKS_OL_RC_UPDATE*)0x441110
+ p/x *(RKS_OL_RC_UPDATE*)0x441034
+ p/x *(RKS_OL_RC_UPDATE*)0x440fe4
+ p/x *(RKS_OL_RC_UPDATE*)0x441200
+ p/x *(RKS_OL_RC_UPDATE*)0x4410ac
+ p/x *(RKS_OL_RC_UPDATE*)0x441188
+ p/x *(RKS_OL_RC_UPDATE*)0x44100c
+ p/x *(RKS_OL_RC_UPDATE*)0x44114c
+ p/x *(RKS_OL_RC_UPDATE*)0x441084
+ p/x *(RKS_OL_RC_UPDATE*)0x4411d8
+ p/x *(RKS_OL_RC_UPDATE*)0x440fbc
+ p/x *(RKS_OL_RC_UPDATE*)0x441124
+ p/x *(RKS_OL_RC_UPDATE*)0x440ff8
+ p/x *(RKS_OL_RC_UPDATE*)0x441160
+ p/x *(RKS_OL_RC_UPDATE*)0x441070
+ p/x *(RKS_OL_RC_UPDATE*)0x4411c4
+ p/x *(RKS_OL_RC_UPDATE*)0x441098
+ p/x *(RKS_OL_RC_UPDATE*)0x440f80
+ p/x *(RKS_OL_RC_UPDATE*)0x441174
+ p/x *(RKS_OL_RC_UPDATE*)0x440f94
+ p/x *(RKS_OL_RC_UPDATE*)0x441020
+ p/x *(RKS_OL_RC_UPDATE*)0x4411ec
+ p/x *(RKS_OL_RC_UPDATE*)0x440fa8
+ p/x *(RKS_OL_RC_UPDATE*)0x4410fc
+ p/x *(RKS_OL_RC_UPDATE*)0x44119c
+ p/x *(RKS_OL_RC_UPDATE*)0x4411b0
+ p/x *(RKS_OL_RC_UPDATE*)0x4410c0
+ p/x *(RKS_OL_RC_UPDATE*)0x4410e8
+ p/x *(RKS_OL_RC_UPDATE*)0x440fd0
+ p/x *(RKS_OL_RC_UPDATE*)0x44105c
+ p/x *(RKS_OL_RC_UPDATE*)0x4410d4
+ p/x *(RKS_OL_RC_UPDATE*)0x441048
+end
+
+roms
+rams
+
+define rl
+source ./xt-gdbinit_bk
+end
+
+define gen_logs
+
+set logging on dbg.txt
+dbg_buf
+set logging off
+
+set logging on full.txt
+my_decode
+set logging off
+
+end
+
+define detect_key_dup
+ set $total_ast_cnt=g_pdev_p->cfg_tgt.num_ast_entries + g_pdev_p->cfg_tgt.ast_skid_limit
+ set $i=0
+ while $i < 96
+  set $key_addr=0xee8d0 + ($i * 0x48)
+  printf "------------------------------------------\n"   
+  printf "Index : %d, Addr : 0x%x\n", $i, $key_addr
+  printf "------------------------------------------\n"   
+  p/x *(struct wal_sw_peer_key *)$key_addr
+   set $ast_cnt=0
+   set $found=0
+   while ($ast_cnt < $total_ast_cnt)
+	set $mac_0_31=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mac_addr_31_0
+	set $mac_47_32=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mac_addr_47_32
+	set $valid = ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.valid
+
+        set $dmaaddr=((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.peer_entry_ptr
+	if ($dmaaddr) 
+   			if ($dmaaddr & ~dma_local_bits) < 0x00100000
+				set $dmaaddr &= 0x000fffff
+			else
+			   if ($dmaaddr & 0x00080000)
+				set $dmaaddr = ($dmaaddr & 0x000fffff) | 0x00900000
+			   else	
+				set $dmaaddr = ($dmaaddr & 0x000fffff) |  0x00400000
+			   end
+			end
+	end
+
+	if $mac_0_31!=0 && $mac_47_32!=0 && $valid && $dmaaddr == $key_addr
+		printf "----------------------\n"
+		printf "AST Slot : %d ", $ast_cnt
+		if ((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt).hw_ast_entry.mcast
+		 printf "(mcast key)"
+		else
+		 printf "(unicast key)"
+		end
+	        set $mac5= $mac_0_31 & 0xff
+  	        set $mac4= $mac_0_31 >>8 & 0xff
+	        set $mac3= $mac_0_31 >>16 & 0xff
+	        set $mac2= $mac_0_31>>24 & 0xff
+	        set $mac1= $mac_47_32 & 0xff
+		set $mac0= $mac_47_32>>8 & 0xff
+
+	        printf "\nMAC      : %02x:%02x:%02x:%02x:%02x:%02x\n", $mac5, $mac4, $mac3, $mac2, $mac1, $mac0
+		printf "----------------------\n"
+		print *((((wal_pdev_t *)g_pdev_p->pdev_handle)->ast_handle)->ast + $ast_cnt)
+		set $found=1
+	end
+	if $found==1
+	   set $ast_cnt=$total_ast_cnt
+	else
+  	   set $ast_cnt += 1
+	end
+   end
+   if $found == 0
+      printf "----------------\n" 	 	
+      printf "0x%x is Zombie\n", $key_addr
+      printf "----------------\n" 	 	
+   end
+ set $i += 1
+ end 
+end
+
+
+define key_mem
+ set $i=0
+ while $i < 96
+  set $addr=0xee8d0 + ($i * 0x48)
+  printf "------------------------------------------\n"   
+  printf "Index : %d, Addr : 0x%x\n", $i, $addr
+  printf "------------------------------------------\n"   
+  p/x *(struct wal_sw_peer_key *)$addr
+  set $i+=1
+ end
+end
+
+# Rate Vs Power table
+define pwr_table
+  set $total_entries=sizeof(eepromStruct.tpcConfig.ratesArray)/sizeof(eepromStruct.tpcConfig.ratesArray[0])
+  set $i=0
+  printf " -- Rate Vs Power Table -- \n"
+  printf "----------------------------------------\n"
+  printf " RateIdx :      SU       |        MU    |\n"
+  printf "----------------------------------------\n"
+  while $i < $total_entries
+     printf " %7d ", $i
+     printf ": %4d (%2d dBm) |", eepromStruct.tpcConfig.ratesArray[$i] & 0xFF, ((eepromStruct.tpcConfig.ratesArray[$i] & 0xFF)*0.5)
+     printf "%4d (%2d dBm) |\n", ((eepromStruct.tpcConfig.ratesArray[$i]>>8) & 0xFF), (((eepromStruct.tpcConfig.ratesArray[$i]>>8)&0xFF)*0.5)
+     set $i+=1
+  end 
+  printf "----------------------------------------\n"
+
+end
+
+define ce_state
+  set $total_entries=sizeof(CE_id_to_state)/sizeof(CE_id_to_state[0])
+  set $i=0
+  while $i < $total_entries
+  	if CE_id_to_state[$i] 
+		  printf "******** CE %d *********\n", $i
+		  printf "State : "
+		  if CE_id_to_state[$i].state == 0
+			printf "Unused\n"
+		  end	
+		  if CE_id_to_state[$i].state == 1
+			printf "Paused\n"
+		  end	
+		  if CE_id_to_state[$i].state == 2
+			printf "Running\n"
+		  end	
+		  printf "----------------------\n"
+
+		  p/x *CE_id_to_state[$i]
+
+		  if CE_id_to_state[$i].src_ring
+		  	printf "== Src Ring ==\n"
+		  	p/x *CE_id_to_state[$i].src_ring
+		  	if CE_id_to_state[$i].send_cb
+			    printf "send callback : "
+			    p/a CE_id_to_state[$i].send_cb
+			end
+
+			printf " = src descr = \n"
+			set $j=0
+	                while $j<CE_id_to_state[$i].src_ring.nentries
+			    printf "---- src desc %d ----\n", $j
+			    p/x *((struct CE_src_desc *)(CE_id_to_state[$i].src_ring.base_addr_owner_space) + $j)
+
+			    if CE_id_to_state[$i].src_ring.per_transfer_context[$j]
+				# printf "HTC_BUFFER:\n"
+			    	# p/x *(HTC_BUFFER *)CE_id_to_state[$i].src_ring.per_transfer_context[$j]
+				# Start addr of ath_buf and HTC_BUFFER are the same
+				printf "ath_buf (0x%x):\n",  CE_id_to_state[$i].src_ring.per_transfer_context[$j]
+				p/x *(struct ath_buf *)CE_id_to_state[$i].src_ring.per_transfer_context[$j]
+				printf "payload:\n"
+				x/30 ((HTC_BUFFER *)CE_id_to_state[$i].src_ring.per_transfer_context[$j]).buffer
+			    end
+
+			    set $j+=1
+		        end	
+		  end
+
+		  if CE_id_to_state[$i].dest_ring
+		  	printf "== Dest Ring ==\n"
+		  	p/x *CE_id_to_state[$i].dest_ring
+		  	if CE_id_to_state[$i].recv_cb
+		    		printf "recv callback : "
+		    		p/a CE_id_to_state[$i].recv_cb
+		  	end
+
+			printf " == dest descr == \n"
+			set $k=0
+	                while $k < CE_id_to_state[$i].dest_ring.nentries
+			    printf "---- dest desc %d ----\n", $k
+			    p/x *((struct CE_dest_desc *)(CE_id_to_state[$i].dest_ring.base_addr_owner_space) + $k)
+
+			    if CE_id_to_state[$i].dest_ring.per_transfer_context[$k]
+				# printf "HTC_BUFFER:\n"
+			    	# p/x *(HTC_BUFFER *)CE_id_to_state[$i].dest_ring.per_transfer_context[$k]
+				printf "ath_buf (0x%x):\n",  CE_id_to_state[$i].dest_ring.per_transfer_context[$k]
+				p/x *(struct ath_buf *)CE_id_to_state[$i].dest_ring.per_transfer_context[$k]
+				printf "payload:\n"
+				x/30 ((HTC_BUFFER *)CE_id_to_state[$i].dest_ring.per_transfer_context[$k]).buffer
+				# map HTC_FRAME_HDR + WMI_CMD_HDR + payload to above buffer for CE 3
+			    end
+
+			    set $k+=1
+		        end	
+		  end
+	  end
+     	set $i+=1
+  end
+end
+
+
+define dump_buf_config
+	printf " | %02d  | %02d  | %02d  | %02x  |\n", buf_params[$arg0].num, buf_params[$arg0].pool_min, buf_params[$arg0].pool_max, buf_params[$arg0].guranteed_min
+end
+
+define buf_config
+	printf "   --- Buffers Allocation --- \n"
+	printf "-----------------------------------\n"
+	printf "   type  | num | min | max | g_min \n"
+	printf "-----------------------------------\n"
+	printf "|    TX "
+	dump_buf_config 0
+
+	printf "|    RX "
+	dump_buf_config 1
+
+	printf "|  MGMT "
+	dump_buf_config 2
+
+	printf "| SMGMT "
+	dump_buf_config 3
+
+	printf "| LMGMT "
+	dump_buf_config 4
+
+	printf "|    RM "
+	dump_buf_config 5
+
+	printf "| RXHEAD"
+	dump_buf_config 6
+
+	printf "| RXDATA"
+	dump_buf_config 7
+	printf "-----------------------------------\n"
+end 
+
+define ath_buf
+	set $total = buf_params[0].num + buf_params[1].num + buf_params[2].num + buf_params[3].num + buf_params[7].num
+
+	set $i=0
+	printf "Total ath_buf count : %d\n", $total
+
+	while $i < $total
+	  printf "-- ath_buf %d (0x%x) --\n", $i, (((struct ath_buf *)((wlan_buf_ctx_t *)g_pdev_p.p_wlan_buf_ctx).athbufSpace) + $i)
+	  p/x *(((struct ath_buf *)((wlan_buf_ctx_t *)g_pdev_p.p_wlan_buf_ctx).athbufSpace) + $i)
+	  set $i+=1
+	end
+
+end
+
+define wmi_event_buf
+	printf "Total WMI buffered event : %d\n", g_pWMI->BufferedEvts
+	printf "Total WMI direct event : %d\n", g_pWMI->DirectEvts
+	
+	set $i=0
+	printf "==== Buffered Events Buffer ====\n"
+	while $i<g_pWMI->BufferedEvts
+		printf "-- buffered event %d @ (0x%x)-- \n", $i, (((WMI_EVT_PACKET *)g_pWMI->BufferedEvtArray) + $i)
+		p/x *(((WMI_EVT_PACKET *)g_pWMI->BufferedEvtArray) + $i)
+
+		if (((WMI_EVT_PACKET *)g_pWMI->BufferedEvtArray) + $i).HtcBuf.buffer
+			printf "payload:\n"
+			x/10  (((WMI_EVT_PACKET *)g_pWMI->BufferedEvtArray) + $i).HtcBuf.buffer
+		end
+
+		set $i+=1
+	end
+
+	set $i=0
+	printf "==== Direct Events Buffer ====\n"
+	while $i<g_pWMI->DirectEvts
+		printf "-- direct event %d @ (0x%x)-- \n", $i, (((WMI_EVT_PACKET *)g_pWMI->DirectEvtArray) + $i)
+		p/x *(((WMI_EVT_PACKET *)g_pWMI->DirectEvtArray) + $i)
+
+		if (((WMI_EVT_PACKET *)g_pWMI->DirectEvtArray) + $i).HtcBuf.buffer
+			printf "payload:\n"
+			x/10  (((WMI_EVT_PACKET *)g_pWMI->DirectEvtArray) + $i).HtcBuf.buffer
+		end
+
+		set $i+=1
+	end
+end
+
+# Print the Host Interest structure
+define stackdump
+	set $i=0
+	while ($i < 60)
+		set $val=((A_UINT32 *)(((struct host_interest_s *)0x400800)->hi_failure_state))[$i]
+		printf "[%02d]  :  0x%08x\n", $i, $val
+		set $i=$i+1
+	end
+end
